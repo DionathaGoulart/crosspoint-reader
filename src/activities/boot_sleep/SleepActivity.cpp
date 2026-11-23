@@ -752,6 +752,8 @@ void SleepActivity::onEnter() {
       return renderCustomSleepScreen();
     case (CrossPointSettings::SLEEP_SCREEN_MODE::STATS):
       return renderStatsSleepScreen();
+    case (CrossPointSettings::SLEEP_SCREEN_MODE::STATS_CUSTOM):
+      return renderStatsOverWallpaperSleepScreen();
     case (CrossPointSettings::SLEEP_SCREEN_MODE::COVER):
       return renderCoverSleepScreen();
     case (CrossPointSettings::SLEEP_SCREEN_MODE::COVER_CUSTOM):
@@ -917,6 +919,90 @@ void SleepActivity::renderStatsSleepScreen() const {
   if (SETTINGS.sleepScreen != CrossPointSettings::SLEEP_SCREEN_MODE::LIGHT) {
     renderer.invertScreen();
   }
+  renderer.displayBuffer(kSleepClean);
+}
+
+// The wallpaper, with a narrow band of figures along the bottom.
+//
+// A photo on a one-bit panel leaves no legible place for text, so the numbers
+// get a solid white strip of their own rather than being drawn over the
+// picture and lost in it. The strip takes a sixth of the height; the rest is
+// wallpaper, which is the point of the mode.
+void SleepActivity::renderStatsOverWallpaperSleepScreen() const {
+  const int pageWidth = renderer.getScreenWidth();
+  const int pageHeight = renderer.getScreenHeight();
+
+  auto snapshot = statsService::load();
+  // No figures yet: the plain wallpaper is a better screen than an empty band.
+  if (!snapshot.valid || snapshot.summary.sessionCount == 0) {
+    renderCustomSleepScreen();
+    return;
+  }
+
+  std::string selectedPath;
+  selectRandomSleepFile("/.sleep", "/sleep", SleepRecentKind::Standard, selectedPath);
+  if (selectedPath.empty() && Storage.exists("/sleep.bmp")) selectedPath = "/sleep.bmp";
+  if (selectedPath.empty()) {
+    // No wallpaper on the card; the figures alone are the honest fallback.
+    renderStatsSleepScreen();
+    return;
+  }
+
+  renderer.clearScreen();
+  {
+    HalFile file;
+    if (!Storage.openFileForRead("SLP", selectedPath, file)) {
+      renderStatsSleepScreen();
+      return;
+    }
+    Bitmap wallpaper(file);
+    // Drawn here rather than through renderBitmapSleepScreen because that one
+    // publishes the frame and drives the grayscale planes; this mode has to
+    // keep the buffer open to put the band on top of it.
+    if (wallpaper.parseHeaders() != BmpReaderError::Ok) {
+      file.close();
+      renderStatsSleepScreen();
+      return;
+    }
+    const auto placement = calculateBitmapPlacement(wallpaper.getWidth(), wallpaper.getHeight(), renderer);
+    renderer.drawBitmap(wallpaper, placement.x, placement.y, pageWidth, pageHeight, placement.cropX, placement.cropY);
+    file.close();
+  }
+
+  const stats::Summary& s = snapshot.summary;
+  const int bandHeight = pageHeight / 6;
+  const int bandTop = pageHeight - bandHeight;
+  renderer.fillRect(0, bandTop, pageWidth, bandHeight, false);
+  // One hairline where the picture meets the band, so the two read as separate
+  // surfaces instead of the photo appearing to fade out.
+  renderer.fillRect(0, bandTop, pageWidth, 2, true);
+
+  struct Figure {
+    char value[24];
+    const char* label;
+  };
+  Figure figures[3];
+  stats::formatDuration(figures[0].value, sizeof(figures[0].value), s.totalMinutes);
+  figures[0].label = tr(STR_STATS_TOTAL);
+  std::snprintf(figures[1].value, sizeof(figures[1].value), "%u", static_cast<unsigned>(s.currentStreak));
+  figures[1].label = tr(STR_STATS_STREAK);
+  stats::formatDuration(figures[2].value, sizeof(figures[2].value), s.todayMinutes);
+  figures[2].label = tr(STR_STATS_TODAY);
+
+  const int column = pageWidth / 3;
+  const int valueY = bandTop + bandHeight / 2 - 6;
+  const int labelY = bandTop + bandHeight - 26;
+  for (int i = 0; i < 3; ++i) {
+    const int cx = column * i;
+    const int valueWidth = renderer.getTextWidth(UI_12_FONT_ID, figures[i].value, EpdFontFamily::BOLD);
+    renderer.drawText(UI_12_FONT_ID, cx + (column - valueWidth) / 2, valueY, figures[i].value, true,
+                      EpdFontFamily::BOLD);
+    const int labelWidth = renderer.getTextWidth(SMALL_FONT_ID, figures[i].label);
+    renderer.drawText(SMALL_FONT_ID, cx + (column - labelWidth) / 2, labelY, figures[i].label);
+  }
+
+  // No invertScreen() here: the wallpaper carries its own tone, and inverting
+  // would turn the photograph into a negative.
   renderer.displayBuffer(kSleepClean);
 }
 

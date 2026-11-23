@@ -20,6 +20,9 @@ class SleepActivity final : public Activity {
   // Reading figures instead of art. Reads only the statistics cache, never the
   // session log: this runs on the way to sleep, where the time budget is tight.
   void renderStatsSleepScreen() const;
+  // The wallpaper with a thin band of figures over it. Keeps the picture the
+  // point of the screen; the numbers are a caption, not a dashboard.
+  void renderStatsOverWallpaperSleepScreen() const;
   void renderBitmapSleepScreen(const Bitmap& bitmap, bool preserveBackground = false) const;
   bool renderSleepOverlayFile(HalFile& file, const char* pathForLog) const;
   bool renderTransparentOverlayPng(const std::string& path) const;

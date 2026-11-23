@@ -29,7 +29,7 @@
 #include "util/BookProgress.h"
 
 int HomeActivity::getMenuItemCount() const {
-  int count = 4;  // File Browser, Library, File transfer, Settings
+  int count = 5;  // File Browser, Library, Statistics, File transfer, Settings
   if (!recentBooks.empty()) {
     count += recentBooks.size();
   }
@@ -559,17 +559,29 @@ void HomeActivity::render(RenderLock&&) {
   // Build menu items dynamically
   std::vector<const char*> menuItems = {tr(STR_BROWSE_FILES), tr(STR_LIBRARY), tr(STR_STATS_TITLE),
                                         tr(STR_FILE_TRANSFER), tr(STR_SETTINGS_TITLE)};
-  std::vector<UIIcon> menuIcons = {Folder, Library, Transfer, Settings};
+  std::vector<UIIcon> menuIcons = {Folder, Library, Recent, Transfer, Settings};
 
   if (slotItem() != HomeMenuItem::NONE) {
     menuItems.insert(menuItems.begin() + 3, hasPlugins ? tr(STR_PLUGINS) : tr(STR_OPDS_BROWSER));
-    menuIcons.insert(menuIcons.begin() + 2, hasPlugins ? Plugins : Book);
+    menuIcons.insert(menuIcons.begin() + 3, hasPlugins ? Plugins : Book);
   }
 
   if (metrics.homeContinueReadingInMenu && !recentBooks.empty()) {
     // Insert Continue Reading at the top if enabled in theme
     menuItems.insert(menuItems.begin(), tr(STR_CONTINUE_READING));
     menuIcons.insert(menuIcons.begin(), Book);
+  }
+
+  // Three lists have to agree: the labels, the icons, and getMenuItemCount(),
+  // which bounds button navigation. They are built apart, so a new entry that
+  // updates only some of them makes the last row unreachable or reads an icon
+  // past the end -- which is exactly what adding Statistics did. Say so loudly
+  // rather than drawing a menu nobody can finish walking.
+  if (menuItems.size() != menuIcons.size() ||
+      static_cast<int>(menuItems.size()) !=
+          getMenuItemCount() - (metrics.homeContinueReadingInMenu ? 0 : static_cast<int>(recentBooks.size()))) {
+    LOG_ERR("HOME", "menu out of step: %u labels, %u icons, count %d", static_cast<unsigned>(menuItems.size()),
+            static_cast<unsigned>(menuIcons.size()), getMenuItemCount());
   }
 
   GUI.drawButtonMenu(

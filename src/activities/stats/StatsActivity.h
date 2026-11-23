@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "activities/UiTabListActivity.h"
+#include "components/themes/BaseTheme.h"  // Rect
 #include "stats/StatsService.h"
 
 // Reading statistics, as four tabs of rows.
@@ -50,6 +51,8 @@ class StatsActivity final : public UiTabListActivity {
   // and a thumbnail in a row would be unreadable.
   void renderBookDetail();
   void drawMonthMap(int top) const;
+  void drawSummaryPanel() const;
+  void drawStatTile(const Rect& box, const char* label, const char* value, bool emphasis = false) const;
 
   statsService::Snapshot snapshot;
   Tab tab = Tab::Summary;

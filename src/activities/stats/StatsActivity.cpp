@@ -110,13 +110,9 @@ void StatsActivity::rebuildRows() {
 
   switch (tab) {
     case Tab::Summary:
-      add(tr(STR_STATS_TOTAL), duration(s.totalMinutes));
-      add(tr(STR_STATS_TODAY), duration(s.todayMinutes));
-      add(tr(STR_STATS_WEEK), duration(s.weekMinutes));
-      add(tr(STR_STATS_STREAK), formatted(StrId::STR_STATS_DAYS_UNIT, s.currentStreak));
-      add(tr(STR_STATS_RECORD), formatted(StrId::STR_STATS_DAYS_UNIT, s.longestStreak));
-      add(tr(STR_STATS_BOOKS_FINISHED), number(s.booksFinished));
-      add(tr(STR_STATS_THIS_YEAR), number(s.booksThisYear));
+      // No rows: the summary is a panel of figures, drawn in drawChrome().
+      // Label/value rows turn the one screen people open most into a table,
+      // and a reading total deserves to be read at a glance.
       break;
 
     case Tab::Books: {
@@ -195,16 +191,13 @@ void StatsActivity::buildScreen(UiScreen& screen) {
   const auto& metrics = UITheme::getInstance().getMetrics();
   const int tabTop = metrics.topPadding + metrics.headerHeight + metrics.verticalSpacing;
   const int rightInset = renderer.getScreenWidth() - (safeArea.x + safeArea.width);
-  int bottomInset = renderer.getScreenHeight() - (safeArea.y + safeArea.height);
-  // The Summary tab keeps the lower band for the month map, which the list
-  // must not scroll into.
-  if (tab == Tab::Summary && !snapshot.clockUnset && snapshot.summary.sessionCount > 0) {
-    bottomInset += 132;
-  }
+  const int bottomInset = renderer.getScreenHeight() - (safeArea.y + safeArea.height);
   screen.setContentMarginFromScreen(fui::Insets{static_cast<int16_t>(tabTop), static_cast<int16_t>(rightInset),
                                                 static_cast<int16_t>(bottomInset), static_cast<int16_t>(safeArea.x)});
 
   buildTabBar(screen);
+
+  if (tab == Tab::Summary) return;  // drawn whole by drawSummaryPanel()
 
   if (rowItems.empty()) {
     const auto body = screen.body();
@@ -230,8 +223,87 @@ void StatsActivity::buildScreen(UiScreen& screen) {
 
 void StatsActivity::drawChrome() {
   UiTabListActivity::drawChrome();
-  if (tab != Tab::Summary || snapshot.clockUnset || snapshot.summary.sessionCount == 0) return;
-  drawMonthMap(renderer.getScreenHeight() - UITheme::getInstance().getMetrics().buttonHintsHeight - 126);
+  if (tab == Tab::Summary) drawSummaryPanel();
+}
+
+// A framed cell: the value large and centred, its label beneath in small type.
+// The frame is what makes a grid of these read as one table instead of as
+// numbers floating on the page.
+void StatsActivity::drawStatTile(const Rect& box, const char* label, const char* value, const bool emphasis) const {
+  renderer.drawRect(box.x, box.y, box.width, box.height, true);
+  const int valueFont = emphasis ? NOTOSANS_18_FONT_ID : UI_12_FONT_ID;
+  const int valueWidth = renderer.getTextWidth(valueFont, value, EpdFontFamily::BOLD);
+  const int labelHeight = renderer.getLineHeight(SMALL_FONT_ID);
+  const int valueHeight = renderer.getLineHeight(valueFont);
+  // The pair is centred as a block, so tiles of different heights still line
+  // their contents up with each other.
+  const int top = box.y + (box.height - valueHeight - labelHeight - 6) / 2;
+  renderer.drawText(valueFont, box.x + (box.width - valueWidth) / 2, top + valueHeight - 4, value, true,
+                    EpdFontFamily::BOLD);
+  const int labelWidth = renderer.getTextWidth(SMALL_FONT_ID, label);
+  renderer.drawText(SMALL_FONT_ID, box.x + (box.width - labelWidth) / 2, top + valueHeight + labelHeight + 2, label);
+}
+
+// Total up top, then four figures, then the three that describe consistency,
+// then the month. Heights are proportions of whatever band is left after the
+// header, tab bar and hint bar, so the panel survives a different panel size.
+void StatsActivity::drawSummaryPanel() const {
+  const stats::Summary& s = snapshot.summary;
+  const auto& metrics = UITheme::getInstance().getMetrics();
+  const int pageWidth = renderer.getScreenWidth();
+  const int pageHeight = renderer.getScreenHeight();
+  const int left = 14;
+  const int width = pageWidth - left * 2;
+  const int top = metrics.topPadding + metrics.headerHeight + metrics.tabBarHeight + 24;
+  const int bottom = pageHeight - metrics.buttonHintsHeight - 10;
+  const int height = bottom - top;
+  if (height < 200) return;
+
+  if (snapshot.summary.sessionCount == 0) {
+    const char* message =
+        I18N.get(snapshot.clockUnset ? StrId::STR_STATS_CLOCK_UNSET : StrId::STR_STATS_NO_DATA);
+    UITheme::drawCenteredWrappedText(renderer, Rect{left, top + height / 3, width, 120}, UI_10_FONT_ID, message, 3);
+    return;
+  }
+
+  const int gap = 8;
+  const int heroHeight = height * 22 / 100;
+  const int gridHeight = height * 30 / 100;
+  const int streakHeight = height * 17 / 100;
+
+  char value[24];
+  stats::formatDuration(value, sizeof(value), s.totalMinutes);
+  drawStatTile(Rect{left, top, width, heroHeight}, tr(STR_STATS_TOTAL), value, true);
+
+  int y = top + heroHeight + gap;
+  const int cellWidth = (width - gap) / 2;
+  const int cellHeight = (gridHeight - gap) / 2;
+  const auto cell = [&](int column, int row) {
+    return Rect{left + column * (cellWidth + gap), y + row * (cellHeight + gap), cellWidth, cellHeight};
+  };
+  stats::formatDuration(value, sizeof(value), s.todayMinutes);
+  drawStatTile(cell(0, 0), tr(STR_STATS_TODAY), value);
+  stats::formatDuration(value, sizeof(value), s.weekMinutes);
+  drawStatTile(cell(1, 0), tr(STR_STATS_WEEK), value);
+  std::snprintf(value, sizeof(value), "%u", static_cast<unsigned>(s.booksFinished));
+  drawStatTile(cell(0, 1), tr(STR_STATS_BOOKS_FINISHED), value);
+  std::snprintf(value, sizeof(value), "%u", static_cast<unsigned>(s.booksThisYear));
+  drawStatTile(cell(1, 1), tr(STR_STATS_THIS_YEAR), value);
+
+  y += gridHeight + gap;
+  const int thirdWidth = (width - gap * 2) / 3;
+  const auto third = [&](int column) {
+    return Rect{left + column * (thirdWidth + gap), y, thirdWidth, streakHeight};
+  };
+  std::snprintf(value, sizeof(value), "%u", static_cast<unsigned>(s.currentStreak));
+  drawStatTile(third(0), tr(STR_STATS_STREAK), value);
+  std::snprintf(value, sizeof(value), "%u", static_cast<unsigned>(s.longestStreak));
+  drawStatTile(third(1), tr(STR_STATS_RECORD), value);
+  std::snprintf(value, sizeof(value), "%u", static_cast<unsigned>(s.daysRead));
+  drawStatTile(third(2), tr(STR_STATS_DAYS_READ), value);
+
+  y += streakHeight + gap + 4;
+  if (!snapshot.clockUnset && y + 70 < bottom) drawMonthMap(y);
 }
 
 void StatsActivity::drawMonthMap(const int top) const {

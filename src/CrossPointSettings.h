@@ -34,6 +34,7 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
     // Appended, never inserted: the value is persisted in settings.json, so
     // renumbering an existing mode would move every reader to a different one.
     STATS = 9,
+    STATS_CUSTOM = 10,
     SLEEP_SCREEN_MODE_COUNT
   };
   enum SLEEP_SCREEN_COVER_MODE { FIT = 0, CROP = 1, SLEEP_SCREEN_COVER_MODE_COUNT };
