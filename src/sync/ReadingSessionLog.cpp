@@ -17,6 +17,7 @@
 #include <ctime>
 
 #include "SyncRequest.h"
+#include "stats/StatsRollup.h"
 
 namespace {
 constexpr char LOG_PATH[] = "/.crosspoint/reading_sessions.jsonl";
@@ -109,6 +110,8 @@ bool readingSessionLog::append(const std::string& document, const std::string& b
     length = SyncRequest::serialize(doc, line, MAX_LINE);
   }
   if (length == 0) return false;
+  // The record without its newline, for the statistics cache below.
+  const size_t jsonLength = length;
   line[length++] = '\n';
 
   Storage.mkdir("/.crosspoint");
@@ -129,8 +132,18 @@ bool readingSessionLog::append(const std::string& document, const std::string& b
   // A partial line would swallow the next session appended after it.
   if (!written) file.truncate(sizeBefore);
   file.close();
-  if (!written) LOG_ERR("RSL", "Failed to append a reading session");
-  return written;
+  if (!written) {
+    LOG_ERR("RSL", "Failed to append a reading session");
+    return false;
+  }
+  // Fold the record straight into the statistics cache, so a stats screen
+  // never has to re-read this log. `line` may now point one byte earlier than
+  // the JSON, at a newline that closed an unfinished record, so the record's
+  // own offset is sizeBefore plus that byte. Best effort: statsRollup::load()
+  // rebuilds from this log whenever the cache is missing or behind.
+  statsRollup::appendLine(buffer.get() + 1, jsonLength, sizeBefore + (length - jsonLength - 1),
+                          sizeBefore + length);
+  return true;
 }
 
 bool readingSessionLog::upload(SyncRequest& sync) {

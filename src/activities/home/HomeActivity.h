@@ -52,6 +52,8 @@ class HomeActivity final : public Activity {
     ++i;
     if (item == HomeMenuItem::LIBRARY) return i;
     ++i;
+    if (item == HomeMenuItem::STATS) return i;
+    ++i;
     if (slot != HomeMenuItem::NONE && item == slot) return i;
     if (item == HomeMenuItem::PLUGINS) return 0;
     if (slot != HomeMenuItem::NONE) ++i;
@@ -67,6 +69,7 @@ class HomeActivity final : public Activity {
     int i = 0;
     if (idx == i++) return HomeMenuItem::FILE_BROWSER;
     if (idx == i++) return HomeMenuItem::LIBRARY;
+    if (idx == i++) return HomeMenuItem::STATS;
     if (slot != HomeMenuItem::NONE && idx == i++) return slot;
     if (idx == i++) return HomeMenuItem::FILE_TRANSFER;
     if (idx == i) return HomeMenuItem::SETTINGS_MENU;

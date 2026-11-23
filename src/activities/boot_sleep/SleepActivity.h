@@ -17,6 +17,9 @@ class SleepActivity final : public Activity {
   void renderCustomSleepScreen() const;
   bool renderCustomSleepBmp(const std::string& path) const;
   void renderCoverSleepScreen() const;
+  // Reading figures instead of art. Reads only the statistics cache, never the
+  // session log: this runs on the way to sleep, where the time budget is tight.
+  void renderStatsSleepScreen() const;
   void renderBitmapSleepScreen(const Bitmap& bitmap, bool preserveBackground = false) const;
   bool renderSleepOverlayFile(HalFile& file, const char* pathForLog) const;
   bool renderTransparentOverlayPng(const std::string& path) const;

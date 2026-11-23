@@ -27,6 +27,7 @@
 #include "CrossPointSettings.h"
 #include "CrossPointState.h"
 #include "activities/reader/ReaderUtils.h"
+#include "stats/StatsService.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
 #include "images/Logo120.h"
@@ -749,6 +750,8 @@ void SleepActivity::onEnter() {
       return renderBlankSleepScreen();
     case (CrossPointSettings::SLEEP_SCREEN_MODE::CUSTOM):
       return renderCustomSleepScreen();
+    case (CrossPointSettings::SLEEP_SCREEN_MODE::STATS):
+      return renderStatsSleepScreen();
     case (CrossPointSettings::SLEEP_SCREEN_MODE::COVER):
       return renderCoverSleepScreen();
     case (CrossPointSettings::SLEEP_SCREEN_MODE::COVER_CUSTOM):
@@ -826,6 +829,97 @@ void SleepActivity::renderCustomSleepScreen() const {
 // Sleep screens paint with kSleepClean (after the white clean in onEnter): HALF, not
 // the multi-flash GC waveform (0xF7) that FULL_REFRESH selects (#2471's blinking
 // complaint), except on Metalio.
+// Four figures and a thirty-day map. Deliberately sparse: this is read at a
+// glance, in passing, on a screen that is about to stop updating.
+void SleepActivity::renderStatsSleepScreen() const {
+  const int pageWidth = renderer.getScreenWidth();
+  const int pageHeight = renderer.getScreenHeight();
+
+  auto snapshot = statsService::load();
+  // Nothing folded yet, or no memory for the aggregate. Falling back keeps a
+  // first boot from showing an empty frame the reader cannot interpret.
+  if (!snapshot.valid || snapshot.summary.sessionCount == 0) {
+    renderDefaultSleepScreen();
+    return;
+  }
+  const stats::Summary& s = snapshot.summary;
+
+  renderer.clearScreen();
+
+  const int margin = 28;
+  int y = pageHeight / 6;
+  renderer.drawCenteredText(UI_10_FONT_ID, y, tr(STR_STATS_TITLE), true, EpdFontFamily::BOLD);
+  y += renderer.getLineHeight(UI_10_FONT_ID) + 34;
+
+  // Two by two. Each cell draws its value large with the label beneath, so the
+  // numbers line up across cells even when the labels differ in length.
+  struct Tile {
+    char value[24];
+    const char* label;
+  };
+  Tile tiles[4];
+  stats::formatDuration(tiles[0].value, sizeof(tiles[0].value), s.totalMinutes);
+  tiles[0].label = tr(STR_STATS_TOTAL);
+  std::snprintf(tiles[1].value, sizeof(tiles[1].value), "%u", static_cast<unsigned>(s.booksFinished));
+  tiles[1].label = tr(STR_STATS_BOOKS_FINISHED);
+  std::snprintf(tiles[2].value, sizeof(tiles[2].value), "%u", static_cast<unsigned>(s.currentStreak));
+  tiles[2].label = tr(STR_STATS_STREAK);
+  stats::formatDuration(tiles[3].value, sizeof(tiles[3].value), s.todayMinutes);
+  tiles[3].label = tr(STR_STATS_TODAY);
+
+  const int cellWidth = (pageWidth - margin * 2) / 2;
+  const int cellHeight = 104;
+  for (int i = 0; i < 4; ++i) {
+    const int cx = margin + (i % 2) * cellWidth;
+    const int cy = y + (i / 2) * cellHeight;
+    const int valueWidth = renderer.getTextWidth(UI_12_FONT_ID, tiles[i].value, EpdFontFamily::BOLD);
+    renderer.drawText(UI_12_FONT_ID, cx + (cellWidth - valueWidth) / 2, cy + 34, tiles[i].value, true,
+                      EpdFontFamily::BOLD);
+    const int labelWidth = renderer.getTextWidth(SMALL_FONT_ID, tiles[i].label);
+    renderer.drawText(SMALL_FONT_ID, cx + (cellWidth - labelWidth) / 2, cy + 62, tiles[i].label);
+  }
+  y += cellHeight * 2 + 26;
+
+  // Thirty days, ten to a row, oldest first. A filled cell is a day with
+  // reading; the outline keeps an empty day visible rather than blank.
+  uint16_t days[30];
+  const size_t dayCount = stats::monthMap(*snapshot.aggregate, s.today, 30, days, 30);
+  if (dayCount > 0 && !snapshot.clockUnset) {
+    const int label = renderer.getTextWidth(SMALL_FONT_ID, tr(STR_STATS_MONTH_MAP));
+    renderer.drawText(SMALL_FONT_ID, (pageWidth - label) / 2, y, tr(STR_STATS_MONTH_MAP));
+    y += renderer.getLineHeight(SMALL_FONT_ID) + 12;
+
+    constexpr int kColumns = 10;
+    const int cell = 22;
+    const int gap = 6;
+    const int gridWidth = kColumns * cell + (kColumns - 1) * gap;
+    const int startX = (pageWidth - gridWidth) / 2;
+    for (size_t i = 0; i < dayCount; ++i) {
+      const int gx = startX + static_cast<int>(i % kColumns) * (cell + gap);
+      const int gy = y + static_cast<int>(i / kColumns) * (cell + gap);
+      if (days[i] > 0) {
+        renderer.fillRect(gx, gy, cell, cell, true);
+      } else {
+        renderer.drawRect(gx, gy, cell, cell, true);
+      }
+    }
+    y += static_cast<int>((dayCount + kColumns - 1) / kColumns) * (cell + gap) + 18;
+  }
+
+  if (snapshot.clockUnset) {
+    const int w = renderer.getTextWidth(SMALL_FONT_ID, tr(STR_STATS_CLOCK_UNSET));
+    renderer.drawText(SMALL_FONT_ID, std::max(margin, (pageWidth - w) / 2), y, tr(STR_STATS_CLOCK_UNSET));
+  }
+
+  renderer.drawCenteredText(SMALL_FONT_ID, pageHeight - 56, tr(STR_SLEEPING));
+
+  // Dark like the default screen unless the reader picked the light one.
+  if (SETTINGS.sleepScreen != CrossPointSettings::SLEEP_SCREEN_MODE::LIGHT) {
+    renderer.invertScreen();
+  }
+  renderer.displayBuffer(kSleepClean);
+}
+
 void SleepActivity::renderDefaultSleepScreen() const {
   const auto pageWidth = renderer.getScreenWidth();
   const auto pageHeight = renderer.getScreenHeight();

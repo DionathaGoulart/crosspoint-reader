@@ -1,0 +1,579 @@
+# 147 chaves que faltam em portuguese-BR.yaml.
+# Uma linha EN + uma linha ES de referencia, depois a linha a preencher.
+# Espacos no inicio/fim dentro das aspas sao significativos: alguns valores
+# sao prefixos colados a um numero ou nome pelo codigo que os usa.
+
+# EN  STR_FONT_DAMAGED: "Damaged font file"
+# ES  STR_FONT_DAMAGED: "Archivo de fuente dañado"
+STR_FONT_DAMAGED: "Damaged font file"
+
+# EN  STR_DICT_HISTORY_FULL: "Lookup History Is Full"
+# ES  STR_DICT_HISTORY_FULL: "El historial de consultas está lleno"
+STR_DICT_HISTORY_FULL: "Lookup History Is Full"
+
+# EN  STR_DICT_RESTORE_FAILED: "Couldn't Restore Definition Position"
+# ES  STR_DICT_RESTORE_FAILED: "No se pudo restaurar la posición"
+STR_DICT_RESTORE_FAILED: "Couldn't Restore Definition Position"
+
+# EN  STR_SETTINGS_GENERAL: "System"
+# ES  STR_SETTINGS_GENERAL: "Sistema"
+STR_SETTINGS_GENERAL: "System"
+
+# EN  STR_SETTINGS_NETWORK: "Connectivity"
+# ES  STR_SETTINGS_NETWORK: "Conectividad"
+STR_SETTINGS_NETWORK: "Connectivity"
+
+# EN  STR_PARAGRAPH_INDENTATION: "Paragraph Indentation"
+# ES  STR_PARAGRAPH_INDENTATION: "Sangría de párrafo"
+STR_PARAGRAPH_INDENTATION: "Paragraph Indentation"
+
+# EN  STR_IMAGES_DISPLAY_BW: "Black & White"
+# ES  STR_IMAGES_DISPLAY_BW: "Blanco y negro"
+STR_IMAGES_DISPLAY_BW: "Black & White"
+
+# EN  STR_VIBRATION: "Haptic Feedback"
+# ES  STR_VIBRATION: "Respuesta háptica"
+STR_VIBRATION: "Haptic Feedback"
+
+# EN  STR_VIBRATION_TOUCH: "On Touch"
+# ES  STR_VIBRATION_TOUCH: "Al tocar"
+STR_VIBRATION_TOUCH: "On Touch"
+
+# EN  STR_VIBRATION_TOUCH_PAGE: "On Touch + Page Turn"
+# ES  STR_VIBRATION_TOUCH_PAGE: "Al tocar y pasar página"
+STR_VIBRATION_TOUCH_PAGE: "On Touch + Page Turn"
+
+# EN  STR_HAPTIC_INTENSITY: "Haptic Intensity"
+# ES  STR_HAPTIC_INTENSITY: "Intensidad háptica"
+STR_HAPTIC_INTENSITY: "Haptic Intensity"
+
+# EN  STR_HAPTIC_LOW: "Low"
+# ES  STR_HAPTIC_LOW: "Baja"
+STR_HAPTIC_LOW: "Low"
+
+# EN  STR_HAPTIC_MEDIUM: "Medium"
+# ES  STR_HAPTIC_MEDIUM: "Media"
+STR_HAPTIC_MEDIUM: "Medium"
+
+# EN  STR_HAPTIC_HIGH: "High"
+# ES  STR_HAPTIC_HIGH: "Alta"
+STR_HAPTIC_HIGH: "High"
+
+# EN  STR_SIDE_BTN_FOLLOW_ORIENTATION: "Orient Side Buttons"
+STR_SIDE_BTN_FOLLOW_ORIENTATION: "Orient Side Buttons"
+
+# EN  STR_HYPHENATION_NO_PREVIEW: "Hyphenation (no preview)"
+# ES  STR_HYPHENATION_NO_PREVIEW: "División de palabras (sin vista previa)"
+STR_HYPHENATION_NO_PREVIEW: "Hyphenation (no preview)"
+
+# EN  STR_EMBEDDED_STYLE_NO_PREVIEW: "Embedded Style (no preview)"
+# ES  STR_EMBEDDED_STYLE_NO_PREVIEW: "Estilo integrado (sin vista previa)"
+STR_EMBEDDED_STYLE_NO_PREVIEW: "Embedded Style (no preview)"
+
+# EN  STR_TEXT_AA_NO_PREVIEW: "Text Anti-Aliasing (no preview)"
+# ES  STR_TEXT_AA_NO_PREVIEW: "Suavizado de texto (sin vista previa)"
+STR_TEXT_AA_NO_PREVIEW: "Text Anti-Aliasing (no preview)"
+
+# EN  STR_SHOW_FILE_EXTENSIONS: "Show File Extensions"
+STR_SHOW_FILE_EXTENSIONS: "Show File Extensions"
+
+# EN  STR_LIBRARY_NO_OPENED: "No opened books yet"
+STR_LIBRARY_NO_OPENED: "No opened books yet"
+
+# EN  STR_LIBRARY_RECENT_OPENED_ONLY: "Hide New Files in Recent"
+STR_LIBRARY_RECENT_OPENED_ONLY: "Hide New Files in Recent"
+
+# EN  STR_SERVER_TYPE: "Server Type"
+# ES  STR_SERVER_TYPE: "Tipo de servidor"
+STR_SERVER_TYPE: "Server Type"
+
+# EN  STR_KOSYNC_SERVER: "KoSync"
+# ES  STR_KOSYNC_SERVER: "KoSync"
+STR_KOSYNC_SERVER: "KoSync"
+
+# EN  STR_SYNC_CLIPPINGS: "Sync Clippings"
+# ES  STR_SYNC_CLIPPINGS: "Sincronizar recortes"
+STR_SYNC_CLIPPINGS: "Sync Clippings"
+
+# EN  STR_SYNC_ON_SLEEP: "Sync On Sleep"
+STR_SYNC_ON_SLEEP: "Sync On Sleep"
+
+# EN  STR_SYNCING_CLIPPINGS: "Syncing Clippings..."
+# ES  STR_SYNCING_CLIPPINGS: "Sincronizando los recortes..."
+STR_SYNCING_CLIPPINGS: "Syncing Clippings..."
+
+# EN  STR_CLIPPING_SYNC_FAILED: "Could Not Sync Clippings"
+# ES  STR_CLIPPING_SYNC_FAILED: "No se pudieron sincronizar los recortes"
+STR_CLIPPING_SYNC_FAILED: "Could Not Sync Clippings"
+
+# EN  STR_OTHER: "Other"
+# ES  STR_OTHER: "Otro"
+STR_OTHER: "Other"
+
+# EN  STR_SAVE_VOCABULARY_LOOKUPS: "Save Vocabulary Lookups"
+STR_SAVE_VOCABULARY_LOOKUPS: "Save Vocabulary Lookups"
+
+# EN  STR_DOWNLOAD_COMPLETE: "Download complete"
+# ES  STR_DOWNLOAD_COMPLETE: "Descarga completada"
+STR_DOWNLOAD_COMPLETE: "Download complete"
+
+# EN  STR_FEED_UNAUTHORIZED: "Check username and password"
+# ES  STR_FEED_UNAUTHORIZED: "Compruebe el usuario y la contraseña"
+STR_FEED_UNAUTHORIZED: "Check username and password"
+
+# EN  STR_FEED_REDIRECTED: "Server redirected. Try its https:// URL"
+# ES  STR_FEED_REDIRECTED: "Redirección del servidor. Pruebe la URL con https://"
+STR_FEED_REDIRECTED: "Server redirected. Try its https:// URL"
+
+# EN  STR_FEED_SERVER_ERROR: "Server error, try again later"
+# ES  STR_FEED_SERVER_ERROR: "Error del servidor. Inténtelo más tarde"
+STR_FEED_SERVER_ERROR: "Server error, try again later"
+
+# EN  STR_FEED_UNREACHABLE: "Can't reach server"
+# ES  STR_FEED_UNREACHABLE: "No se puede conectar con el servidor"
+STR_FEED_UNREACHABLE: "Can't reach server"
+
+# EN  STR_OPDS_AUTH_FAILED: "Authentication failed - check credentials"
+# ES  STR_OPDS_AUTH_FAILED: "Error de autenticación. Compruebe las credenciales"
+STR_OPDS_AUTH_FAILED: "Authentication failed - check credentials"
+
+# EN  STR_OPDS_SIGNING_IN: "Signing in…"
+# ES  STR_OPDS_SIGNING_IN: "Iniciando sesión…"
+STR_OPDS_SIGNING_IN: "Signing in…"
+
+# EN  STR_OPDS_SEE_ALL: "See all"
+# ES  STR_OPDS_SEE_ALL: "Ver todo"
+STR_OPDS_SEE_ALL: "See all"
+
+# EN  STR_OPDS_MY_ACCOUNT: "My Account"
+# ES  STR_OPDS_MY_ACCOUNT: "Mi cuenta"
+STR_OPDS_MY_ACCOUNT: "My Account"
+
+# EN  STR_OPDS_SHELF: "My Loans"
+# ES  STR_OPDS_SHELF: "Mis préstamos"
+STR_OPDS_SHELF: "My Loans"
+
+# EN  STR_OPDS_WISHLIST: "Reading List"
+# ES  STR_OPDS_WISHLIST: "Lista de lectura"
+STR_OPDS_WISHLIST: "Reading List"
+
+# EN  STR_OPDS_HISTORY: "History"
+# ES  STR_OPDS_HISTORY: "Historial"
+STR_OPDS_HISTORY: "History"
+
+# EN  STR_OPDS_BUY: "Buy"
+# ES  STR_OPDS_BUY: "Comprar"
+STR_OPDS_BUY: "Buy"
+
+# EN  STR_OPDS_NOT_A_BOOK: "Server did not send a book file"
+# ES  STR_OPDS_NOT_A_BOOK: "El servidor no ha enviado un archivo de libro"
+STR_OPDS_NOT_A_BOOK: "Server did not send a book file"
+
+# EN  STR_OPDS_BORROW: "Borrow"
+# ES  STR_OPDS_BORROW: "Pedir prestado"
+STR_OPDS_BORROW: "Borrow"
+
+# EN  STR_OPDS_AVAILABLE: "Available"
+# ES  STR_OPDS_AVAILABLE: "Disponible"
+STR_OPDS_AVAILABLE: "Available"
+
+# EN  STR_OPDS_UNAVAILABLE: "Not available"
+# ES  STR_OPDS_UNAVAILABLE: "No disponible"
+STR_OPDS_UNAVAILABLE: "Not available"
+
+# EN  STR_OPDS_READY: "Ready to borrow"
+# ES  STR_OPDS_READY: "Listo para el préstamo"
+STR_OPDS_READY: "Ready to borrow"
+
+# EN  STR_OPDS_RESERVED: "Reserved"
+# ES  STR_OPDS_RESERVED: "Reservado"
+STR_OPDS_RESERVED: "Reserved"
+
+# EN  STR_OPDS_COPIES: "%d of %d copies available"
+# ES  STR_OPDS_COPIES: "%d de %d ejemplares disponibles"
+STR_OPDS_COPIES: "%d of %d copies available"
+
+# EN  STR_OPDS_HOLDS: "%d hold(s)"
+# ES  STR_OPDS_HOLDS: "Reservas: %d"
+STR_OPDS_HOLDS: "%d hold(s)"
+
+# EN  STR_OPDS_HOLD_POSITION: "You are #%d in line"
+# ES  STR_OPDS_HOLD_POSITION: "Posición en la cola: %d"
+STR_OPDS_HOLD_POSITION: "You are #%d in line"
+
+# EN  STR_OPDS_BY_AUTHOR: "by %s"
+# ES  STR_OPDS_BY_AUTHOR: "de %s"
+STR_OPDS_BY_AUTHOR: "by %s"
+
+# EN  STR_OPDS_ABOUT_BOOK: "About this book"
+# ES  STR_OPDS_ABOUT_BOOK: "Sobre este libro"
+STR_OPDS_ABOUT_BOOK: "About this book"
+
+# EN  STR_DETAILS: "Details"
+# ES  STR_DETAILS: "Detalles"
+STR_DETAILS: "Details"
+
+# EN  STR_OPDS_PLACE_HOLD: "Place Hold"
+# ES  STR_OPDS_PLACE_HOLD: "Reservar"
+STR_OPDS_PLACE_HOLD: "Place Hold"
+
+# EN  STR_LCP_PASSPHRASE: "Enter the book's passphrase"
+# ES  STR_LCP_PASSPHRASE: "Introduzca la contraseña del libro"
+STR_LCP_PASSPHRASE: "Enter the book's passphrase"
+
+# EN  STR_LCP_WRONG_PASSPHRASE: "Wrong passphrase - try again"
+# ES  STR_LCP_WRONG_PASSPHRASE: "Contraseña incorrecta. Inténtelo de nuevo"
+STR_LCP_WRONG_PASSPHRASE: "Wrong passphrase - try again"
+
+# EN  STR_LCP_UNSUPPORTED: "Unsupported protection scheme"
+# ES  STR_LCP_UNSUPPORTED: "Protección no compatible"
+STR_LCP_UNSUPPORTED: "Unsupported protection scheme"
+
+# EN  STR_LCP_OFFICIAL_BUILD: "LCP needs an official firmware release"
+# ES  STR_LCP_OFFICIAL_BUILD: "LCP requiere una versión oficial del firmware"
+STR_LCP_OFFICIAL_BUILD: "LCP needs an official firmware release"
+
+# EN  STR_PLUGINS: "Plugins"
+# ES  STR_PLUGINS: "Complementos"
+STR_PLUGINS: "Plugins"
+
+# EN  STR_ENABLED: "Enabled"
+# ES  STR_ENABLED: "Activado"
+STR_ENABLED: "Enabled"
+
+# EN  STR_PLUGIN_HUB: "Plugin Hub"
+# ES  STR_PLUGIN_HUB: "Plugin Hub"
+STR_PLUGIN_HUB: "Plugin Hub"
+
+# EN  STR_PLUGIN_HUB_DESCRIPTION: "Download, discover, and update plugins."
+# ES  STR_PLUGIN_HUB_DESCRIPTION: "Descargue, descubra y actualice complementos."
+STR_PLUGIN_HUB_DESCRIPTION: "Download, discover, and update plugins."
+
+# EN  STR_INSTALL: "Install"
+# ES  STR_INSTALL: "Instalar"
+STR_INSTALL: "Install"
+
+# EN  STR_AUTHOR: "Author"
+# ES  STR_AUTHOR: "Autoría"
+STR_AUTHOR: "Author"
+
+# EN  STR_REPOSITORY: "Repository"
+# ES  STR_REPOSITORY: "Repositorio"
+STR_REPOSITORY: "Repository"
+
+# EN  STR_VERSION: "Version"
+# ES  STR_VERSION: "Versión"
+STR_VERSION: "Version"
+
+# EN  STR_INSTALL_PLUGIN_HUB: "Install Plugin Hub"
+# ES  STR_INSTALL_PLUGIN_HUB: "Instalar Plugin Hub"
+STR_INSTALL_PLUGIN_HUB: "Install Plugin Hub"
+
+# EN  STR_PLUGIN_HUB_INSTALL_DESCRIPTION: "Browse and install Official and Community plugins. Wi-Fi required."
+# ES  STR_PLUGIN_HUB_INSTALL_DESCRIPTION: "Explore e instale complementos oficiales y de la comunidad. Se necesita Wi-Fi."
+STR_PLUGIN_HUB_INSTALL_DESCRIPTION: "Browse and install Official and Community plugins. Wi-Fi required."
+
+# EN  STR_PLUGIN_HUB_INSTALLED: "Plugin Hub installed"
+# ES  STR_PLUGIN_HUB_INSTALLED: "Plugin Hub instalado"
+STR_PLUGIN_HUB_INSTALLED: "Plugin Hub installed"
+
+# EN  STR_PLUGIN_HUB_INSTALLED_HINT: "Open Plugins to get started."
+# ES  STR_PLUGIN_HUB_INSTALLED_HINT: "Abra Complementos para empezar."
+STR_PLUGIN_HUB_INSTALLED_HINT: "Open Plugins to get started."
+
+# EN  STR_NO_PLUGINS_INSTALLED: "No plugins with device screens installed"
+# ES  STR_NO_PLUGINS_INSTALLED: "No hay complementos con interfaz en el dispositivo"
+STR_NO_PLUGINS_INSTALLED: "No plugins with device screens installed"
+
+# EN  STR_PLUGIN_NOT_SIGNED_IN: "Not signed in. Open the web Plugins page and sign in via the plugin first."
+# ES  STR_PLUGIN_NOT_SIGNED_IN: "No se ha iniciado sesión. Abra Plugins en la interfaz web e inicie sesión desde el complemento."
+STR_PLUGIN_NOT_SIGNED_IN: "Not signed in. Open the web Plugins page and sign in via the plugin first."
+
+# EN  STR_PLUGIN_MANIFEST_INVALID: "Plugin manifest is missing or invalid"
+# ES  STR_PLUGIN_MANIFEST_INVALID: "Falta el manifiesto del complemento o no es válido"
+STR_PLUGIN_MANIFEST_INVALID: "Plugin manifest is missing or invalid"
+
+# EN  STR_PLUGIN_SIGN_IN: "Sign in"
+# ES  STR_PLUGIN_SIGN_IN: "Iniciar sesión"
+STR_PLUGIN_SIGN_IN: "Sign in"
+
+# EN  STR_PLUGIN_SIGN_IN_HINT: "Not signed in yet"
+# ES  STR_PLUGIN_SIGN_IN_HINT: "Aún no se ha iniciado sesión"
+STR_PLUGIN_SIGN_IN_HINT: "Not signed in yet"
+
+# EN  STR_PLUGIN_AUTH_WAITING: "Waiting for authorization..."
+# ES  STR_PLUGIN_AUTH_WAITING: "Esperando autorización..."
+STR_PLUGIN_AUTH_WAITING: "Waiting for authorization..."
+
+# EN  STR_PLUGIN_AUTH_FAILED: "Sign-in failed or expired. Try again."
+# ES  STR_PLUGIN_AUTH_FAILED: "El inicio de sesión ha fallado o ha caducado. Inténtelo de nuevo."
+STR_PLUGIN_AUTH_FAILED: "Sign-in failed or expired. Try again."
+
+# EN  STR_PLUGIN_WEB_ONLY: "Web-only plugin"
+# ES  STR_PLUGIN_WEB_ONLY: "Complemento solo web"
+STR_PLUGIN_WEB_ONLY: "Web-only plugin"
+
+# EN  STR_PLUGIN_RECEIVES_EVENTS: "Receives: %s"
+# ES  STR_PLUGIN_RECEIVES_EVENTS: "Recibe: %s"
+STR_PLUGIN_RECEIVES_EVENTS: "Receives: %s"
+
+# EN  STR_PLUGIN_UNINSTALL: "Uninstall"
+# ES  STR_PLUGIN_UNINSTALL: "Desinstalar"
+STR_PLUGIN_UNINSTALL: "Uninstall"
+
+# EN  STR_PLUGIN_UNINSTALL_TITLE: "Uninstall plugin"
+# ES  STR_PLUGIN_UNINSTALL_TITLE: "Desinstalar complemento"
+STR_PLUGIN_UNINSTALL_TITLE: "Uninstall plugin"
+
+# EN  STR_PLUGIN_UNINSTALL_CONFIRM: "Uninstall %s and delete all of its files?"
+# ES  STR_PLUGIN_UNINSTALL_CONFIRM: "¿Desinstalar %s y borrar todos sus archivos?"
+STR_PLUGIN_UNINSTALL_CONFIRM: "Uninstall %s and delete all of its files?"
+
+# EN  STR_EVENT_BOOK_OPEN: "book opens"
+# ES  STR_EVENT_BOOK_OPEN: "apertura de libros"
+STR_EVENT_BOOK_OPEN: "book opens"
+
+# EN  STR_EVENT_BOOK_CLOSE: "book closes and progress"
+# ES  STR_EVENT_BOOK_CLOSE: "cierre y progreso"
+STR_EVENT_BOOK_CLOSE: "book closes and progress"
+
+# EN  STR_EVENT_READING_SESSION: "reading sessions"
+# ES  STR_EVENT_READING_SESSION: "sesiones de lectura"
+STR_EVENT_READING_SESSION: "reading sessions"
+
+# EN  STR_EVENT_DOWNLOAD: "downloads"
+# ES  STR_EVENT_DOWNLOAD: "descargas"
+STR_EVENT_DOWNLOAD: "downloads"
+
+# EN  STR_EVENT_SLEEP: "sleep and current book"
+# ES  STR_EVENT_SLEEP: "reposo y libro actual"
+STR_EVENT_SLEEP: "sleep and current book"
+
+# EN  STR_LOAN_EXPIRED: "This loan has expired. Borrow or renew the book to keep reading."
+# ES  STR_LOAN_EXPIRED: "Este préstamo ha caducado. Renueve el préstamo o vuelva a pedir el libro para seguir leyendo."
+STR_LOAN_EXPIRED: "This loan has expired. Borrow or renew the book to keep reading."
+
+# EN  STR_LOAN_TIME_UNVERIFIED: "This book is on loan. Connect to Wi-Fi once so the device can check the date."
+# ES  STR_LOAN_TIME_UNVERIFIED: "Este libro está en préstamo. Conéctese a una red Wi-Fi una vez para que el dispositivo pueda comprobar la fecha."
+STR_LOAN_TIME_UNVERIFIED: "This book is on loan. Connect to Wi-Fi once so the device can check the date."
+
+# EN  STR_DRM_PROTECTED_FILE: "DRM-protected file"
+# ES  STR_DRM_PROTECTED_FILE: "Archivo protegido con DRM"
+STR_DRM_PROTECTED_FILE: "DRM-protected file"
+
+# EN  STR_FETCH: "Fetch"
+# ES  STR_FETCH: "Obtener"
+STR_FETCH: "Fetch"
+
+# EN  STR_SLIDE_SWITCH: "Slide Switch"
+# ES  STR_SLIDE_SWITCH: "Interruptor deslizante"
+STR_SLIDE_SWITCH: "Slide Switch"
+
+# EN  STR_CHARGING: "Charging"
+# ES  STR_CHARGING: "Cargando"
+STR_CHARGING: "Charging"
+
+# EN  STR_CHARGED: "Charged"
+# ES  STR_CHARGED: "Cargado"
+STR_CHARGED: "Charged"
+
+# EN  STR_OPDS_DESC: "Download books from your OPDS servers"
+STR_OPDS_DESC: "Download books from your OPDS servers"
+
+# EN  STR_CLIPPING_REMOVED: "Clipping Removed"
+# ES  STR_CLIPPING_REMOVED: "Recorte eliminado"
+STR_CLIPPING_REMOVED: "Clipping Removed"
+
+# EN  STR_CLIPPING_DELETE_FAILED: "Could Not Remove Clipping"
+# ES  STR_CLIPPING_DELETE_FAILED: "No se pudo eliminar el recorte"
+STR_CLIPPING_DELETE_FAILED: "Could Not Remove Clipping"
+
+# EN  STR_CUSTOM_HEADER_1: "Custom Header 1"
+# ES  STR_CUSTOM_HEADER_1: "Cabecera personalizada 1"
+STR_CUSTOM_HEADER_1: "Custom Header 1"
+
+# EN  STR_CUSTOM_HEADER_2: "Custom Header 2"
+# ES  STR_CUSTOM_HEADER_2: "Cabecera personalizada 2"
+STR_CUSTOM_HEADER_2: "Custom Header 2"
+
+# EN  STR_KOREADER_CUSTOM_HEADER_1_NAME: "KOReader Custom Header 1 Name"
+# ES  STR_KOREADER_CUSTOM_HEADER_1_NAME: "Nombre de la cabecera personalizada 1 de KOReader"
+STR_KOREADER_CUSTOM_HEADER_1_NAME: "KOReader Custom Header 1 Name"
+
+# EN  STR_KOREADER_CUSTOM_HEADER_1_VALUE: "KOReader Custom Header 1 Value"
+# ES  STR_KOREADER_CUSTOM_HEADER_1_VALUE: "Valor de la cabecera personalizada 1 de KOReader"
+STR_KOREADER_CUSTOM_HEADER_1_VALUE: "KOReader Custom Header 1 Value"
+
+# EN  STR_KOREADER_CUSTOM_HEADER_2_NAME: "KOReader Custom Header 2 Name"
+# ES  STR_KOREADER_CUSTOM_HEADER_2_NAME: "Nombre de la cabecera personalizada 2 de KOReader"
+STR_KOREADER_CUSTOM_HEADER_2_NAME: "KOReader Custom Header 2 Name"
+
+# EN  STR_KOREADER_CUSTOM_HEADER_2_VALUE: "KOReader Custom Header 2 Value"
+# ES  STR_KOREADER_CUSTOM_HEADER_2_VALUE: "Valor de la cabecera personalizada 2 de KOReader"
+STR_KOREADER_CUSTOM_HEADER_2_VALUE: "KOReader Custom Header 2 Value"
+
+# EN  STR_SPACING_0_PERCENT: "0%"
+# ES  STR_SPACING_0_PERCENT: "0%"
+STR_SPACING_0_PERCENT: "0%"
+
+# EN  STR_SPACING_PLUS_10_PERCENT: "+10%"
+# ES  STR_SPACING_PLUS_10_PERCENT: "+10%"
+STR_SPACING_PLUS_10_PERCENT: "+10%"
+
+# EN  STR_SPACING_PLUS_20_PERCENT_DEFAULT: "+20% (Default)"
+# ES  STR_SPACING_PLUS_20_PERCENT_DEFAULT: "+20% (predet.)"
+STR_SPACING_PLUS_20_PERCENT_DEFAULT: "+20% (Default)"
+
+# EN  STR_SPACING_PLUS_30_PERCENT: "+30%"
+# ES  STR_SPACING_PLUS_30_PERCENT: "+30%"
+STR_SPACING_PLUS_30_PERCENT: "+30%"
+
+# EN  STR_SPACING_PLUS_45_PERCENT: "+45%"
+# ES  STR_SPACING_PLUS_45_PERCENT: "+45%"
+STR_SPACING_PLUS_45_PERCENT: "+45%"
+
+# EN  STR_SPACING_PLUS_60_PERCENT: "+60%"
+# ES  STR_SPACING_PLUS_60_PERCENT: "+60%"
+STR_SPACING_PLUS_60_PERCENT: "+60%"
+
+# EN  STR_SPACING_PLUS_75_PERCENT: "+75%"
+# ES  STR_SPACING_PLUS_75_PERCENT: "+75%"
+STR_SPACING_PLUS_75_PERCENT: "+75%"
+
+# EN  STR_CLIP: "Clip"
+# ES  STR_CLIP: "Recortar"
+STR_CLIP: "Clip"
+
+# EN  STR_CLIPPING_TOO_LONG: "Selection Too Long — Select Less Text"
+# ES  STR_CLIPPING_TOO_LONG: "Selección demasiado larga. Seleccione menos texto"
+STR_CLIPPING_TOO_LONG: "Selection Too Long — Select Less Text"
+
+# EN  STR_CLIPPING_EXPORT_FAILED: "Clipping Saved — Text Export Failed"
+# ES  STR_CLIPPING_EXPORT_FAILED: "Recorte guardado; no se exportó"
+STR_CLIPPING_EXPORT_FAILED: "Clipping Saved — Text Export Failed"
+
+# EN  STR_GO_TO_PASSAGE: "Go to Passage"
+# ES  STR_GO_TO_PASSAGE: "Ir al pasaje"
+STR_GO_TO_PASSAGE: "Go to Passage"
+
+# EN  STR_BT_PAGE_TURNER: "Bluetooth Page Turner"
+# ES  STR_BT_PAGE_TURNER: "Pasapáginas Bluetooth"
+STR_BT_PAGE_TURNER: "Bluetooth Page Turner"
+
+# EN  STR_BT_SCAN: "Scan for Remotes"
+# ES  STR_BT_SCAN: "Buscar mandos"
+STR_BT_SCAN: "Scan for Remotes"
+
+# EN  STR_BT_STOP_SCAN: "Stop Scan"
+# ES  STR_BT_STOP_SCAN: "Detener búsqueda"
+STR_BT_STOP_SCAN: "Stop Scan"
+
+# EN  STR_BT_PAIRED_REMOTES: "Paired Remotes"
+# ES  STR_BT_PAIRED_REMOTES: "Mandos vinculados"
+STR_BT_PAIRED_REMOTES: "Paired Remotes"
+
+# EN  STR_BT_NO_REMOTES: "No paired remotes"
+# ES  STR_BT_NO_REMOTES: "No hay mandos vinculados"
+STR_BT_NO_REMOTES: "No paired remotes"
+
+# EN  STR_BT_START_FAILED: "Could not start Bluetooth"
+# ES  STR_BT_START_FAILED: "No se pudo iniciar Bluetooth"
+STR_BT_START_FAILED: "Could not start Bluetooth"
+
+# EN  STR_BT_LEARN_KEYS: "Learn Page Keys"
+# ES  STR_BT_LEARN_KEYS: "Asignar botones de página"
+STR_BT_LEARN_KEYS: "Learn Page Keys"
+
+# EN  STR_BT_PRESS_NEXT: "Press the next page button"
+# ES  STR_BT_PRESS_NEXT: "Pulse el botón de página siguiente"
+STR_BT_PRESS_NEXT: "Press the next page button"
+
+# EN  STR_BT_PRESS_PREV: "Press the previous page button"
+# ES  STR_BT_PRESS_PREV: "Pulse el botón de página anterior"
+STR_BT_PRESS_PREV: "Press the previous page button"
+
+# EN  STR_BT_KEYS_SAVED: "Page keys saved"
+# ES  STR_BT_KEYS_SAVED: "Asignación guardada"
+STR_BT_KEYS_SAVED: "Page keys saved"
+
+# EN  STR_BT_NO_KEY: "No button pressed"
+# ES  STR_BT_NO_KEY: "No se ha pulsado ningún botón"
+STR_BT_NO_KEY: "No button pressed"
+
+# EN  STR_BT_KEYS_NOT_SAVED: "Could not save the button mapping"
+# ES  STR_BT_KEYS_NOT_SAVED: "No se pudo guardar la asignación de botones"
+STR_BT_KEYS_NOT_SAVED: "Could not save the button mapping"
+
+# EN  STR_BT_CONNECTING: "Connecting Bluetooth…"
+# ES  STR_BT_CONNECTING: "Conectando Bluetooth…"
+STR_BT_CONNECTING: "Connecting Bluetooth…"
+
+# EN  STR_BT_FAILED: "Bluetooth failed"
+# ES  STR_BT_FAILED: "Fallo de Bluetooth"
+STR_BT_FAILED: "Bluetooth failed"
+
+# EN  STR_BT_BUILD_REFUSED: "Bluetooth still busy. Reopen the book"
+# ES  STR_BT_BUILD_REFUSED: "Bluetooth sigue ocupado. Vuelva a abrir el libro"
+STR_BT_BUILD_REFUSED: "Bluetooth still busy. Reopen the book"
+
+# EN  STR_BT_MAP_BUTTONS: "Map Buttons"
+# ES  STR_BT_MAP_BUTTONS: "Asignar botones"
+STR_BT_MAP_BUTTONS: "Map Buttons"
+
+# EN  STR_BT_CONNECT_REMOTE: "Connect a remote first"
+# ES  STR_BT_CONNECT_REMOTE: "Conecte primero un mando"
+STR_BT_CONNECT_REMOTE: "Connect a remote first"
+
+# EN  STR_BT_PRESS_REMOTE: "Press the remote button (15 seconds)"
+# ES  STR_BT_PRESS_REMOTE: "Pulse el botón del mando (15 segundos)"
+STR_BT_PRESS_REMOTE: "Press the remote button (15 seconds)"
+
+# EN  STR_BT_MAPPING_SAVED: "Button mapping saved"
+# ES  STR_BT_MAPPING_SAVED: "Asignación de botones guardada"
+STR_BT_MAPPING_SAVED: "Button mapping saved"
+
+# EN  STR_BT_NEXT_CHAPTER: "Next Chapter"
+# ES  STR_BT_NEXT_CHAPTER: "Capítulo siguiente"
+STR_BT_NEXT_CHAPTER: "Next Chapter"
+
+# EN  STR_BT_PREV_CHAPTER: "Previous Chapter"
+# ES  STR_BT_PREV_CHAPTER: "Capítulo anterior"
+STR_BT_PREV_CHAPTER: "Previous Chapter"
+
+# EN  STR_BT_NO_DEVICES: "No remotes found"
+# ES  STR_BT_NO_DEVICES: "No se encontraron mandos"
+STR_BT_NO_DEVICES: "No remotes found"
+
+# EN  STR_BT_CONNECTED_TO: "Connected to %s"
+# ES  STR_BT_CONNECTED_TO: "Conectado a %s"
+STR_BT_CONNECTED_TO: "Connected to %s"
+
+# EN  STR_BT_LOW_MEMORY: "Bluetooth: not enough memory"
+# ES  STR_BT_LOW_MEMORY: "Bluetooth: memoria insuficiente"
+STR_BT_LOW_MEMORY: "Bluetooth: not enough memory"
+
+# EN  STR_BT_HOLD: "hold"
+# ES  STR_BT_HOLD: "larga"
+STR_BT_HOLD: "hold"
+
+# EN  STR_BT_MAPPING_CLEARED: "Mapping cleared"
+# ES  STR_BT_MAPPING_CLEARED: "Asignación borrada"
+STR_BT_MAPPING_CLEARED: "Mapping cleared"
+
+# EN  STR_POWER_BUTTON: "Power button"
+STR_POWER_BUTTON: "Power button"
+
+# EN  STR_FRONT_BUTTONS: "Front buttons"
+STR_FRONT_BUTTONS: "Front buttons"
+
+# EN  STR_SIDE_BUTTONS: "Side buttons"
+STR_SIDE_BUTTONS: "Side buttons"
+
+# EN  STR_TAPS_AND_GESTURES: "Taps and gestures"
+STR_TAPS_AND_GESTURES: "Taps and gestures"
+
+# EN  STR_PAGE_TURN_LONG_PRESS: "Page turn long press"
+STR_PAGE_TURN_LONG_PRESS: "Page turn long press"
+
+# EN  STR_POWER_DOUBLE_CLICK: "Double click"
+STR_POWER_DOUBLE_CLICK: "Double click"
