@@ -7,6 +7,20 @@
 #include <cstring>
 #include <limits>
 
+bool PersistableStoreBase::writeDocForProfile(const char* fileName, const bool perProfile, const JsonDocument& doc) {
+  // Created on the write path only: a reader who never switches profile should
+  // not have an empty profiles/ directory appear on their card.
+  if (!profilePath::ensureActiveDir(perProfile)) {
+    LOG_ERR("PERSIST", "No profile directory for %s", fileName);
+    return false;
+  }
+  return writeDocToFile(profilePath::resolve(fileName, perProfile).c_str(), doc);
+}
+
+bool PersistableStoreBase::readDocForProfile(const char* fileName, const bool perProfile, JsonDocument& doc) {
+  return readDocFromFile(profilePath::resolve(fileName, perProfile).c_str(), doc);
+}
+
 bool PersistableStoreBase::writeDocToFile(const char* path, const JsonDocument& doc) {
   Storage.mkdir("/.crosspoint");
   String json;

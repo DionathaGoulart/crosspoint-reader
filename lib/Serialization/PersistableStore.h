@@ -6,6 +6,9 @@
 
 #include <mutex>
 #include <string>
+#include <type_traits>
+
+#include "ProfilePath.h"
 
 /**
  * @brief Non-template core of PersistableStore.
@@ -53,6 +56,13 @@ class PersistableStoreBase {
   // does not exist (expected on first boot); logs on read/parse failure.
   static bool readDocFromFile(const char* path, JsonDocument& doc);
 
+  // The two above, with the path resolved for the active profile first. They
+  // are not templates so the resolution and the std::string it needs exist
+  // once, for the same reason serializeJson lives in this class rather than in
+  // every store: a per-store copy is what this abstraction exists to avoid.
+  static bool writeDocForProfile(const char* fileName, bool perProfile, const JsonDocument& doc);
+  static bool readDocForProfile(const char* fileName, bool perProfile, JsonDocument& doc);
+
  protected:
   /**
    * Helper function for extracting an obfuscated password from a JSON value.
@@ -83,6 +93,20 @@ class PersistableStoreBase {
  * always run under it. fromJson must signal legacy-shape upgrades with
  * requestResave(), never by calling saveToFile() directly (deadlock).
  */
+/**
+ * @brief Whether a store's file belongs to the reader rather than the device.
+ *
+ * A store opts in with `static constexpr bool kPerProfile = true;`. Saying
+ * nothing means device-wide, which is the safe default: a file that should have
+ * been split shows up as two readers sharing a figure, while a file that should
+ * not have been split can mean a device that loses its Wi-Fi or its LCP key on
+ * a profile switch.
+ */
+template <typename T, typename = void>
+struct StoreIsPerProfile : std::false_type {};
+template <typename T>
+struct StoreIsPerProfile<T, std::void_t<decltype(T::kPerProfile)>> : std::bool_constant<T::kPerProfile> {};
+
 template <typename T>
 class PersistableStore : public PersistableStoreBase {
  protected:
@@ -103,7 +127,7 @@ class PersistableStore : public PersistableStoreBase {
     std::lock_guard<std::mutex> lock(storeMutex);
     JsonDocument doc;
     static_cast<const T*>(this)->toJson(doc);
-    return writeDocToFile(T::getFilePath(), doc);
+    return writeDocForProfile(T::getFilePath(), StoreIsPerProfile<T>::value, doc);
   }
 
   bool loadFromFile() {
@@ -113,7 +137,7 @@ class PersistableStore : public PersistableStoreBase {
       std::lock_guard<std::mutex> lock(storeMutex);
       resaveRequested = false;
       JsonDocument doc;
-      if (!readDocFromFile(T::getFilePath(), doc)) {
+      if (!readDocForProfile(T::getFilePath(), StoreIsPerProfile<T>::value, doc)) {
         return false;
       }
       ok = static_cast<T*>(this)->fromJson(doc.as<JsonVariantConst>());

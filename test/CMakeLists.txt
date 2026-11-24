@@ -85,6 +85,7 @@ add_subdirectory(inflate_reader)
 add_subdirectory(zip_file)
 add_subdirectory(xtc_parser)
 add_subdirectory(fs_helpers)
+add_subdirectory(profile_path)
 add_subdirectory(http_header)
 add_subdirectory(txt_to_html)
 
