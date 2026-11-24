@@ -18,7 +18,6 @@ namespace statsService {
 struct Snapshot {
   std::unique_ptr<stats::StatsAggregate> aggregate;
   stats::Summary summary{};
-  achievements::Inputs inputs{};
   // False when the aggregate could not be read or allocated. The summary is
   // then all zeros, which a screen shows as an empty state rather than an error.
   bool valid = false;
@@ -31,10 +30,10 @@ struct Snapshot {
 Snapshot load();
 
 // Just the derived figures, for a screen that draws targets rather than the
-// whole statistics surface. Skips the achievement inputs -- the distinct
-// languages walk over every finished book and the std::set it builds -- and
-// releases the ~22 KB aggregate before returning, so nothing of it is held
-// while the caller redraws.
+// whole statistics surface. Releases the ~22 KB aggregate before returning, so
+// nothing of it is held while the caller redraws; load() hands the aggregate
+// back instead, because its callers draw the per-book and per-day surfaces
+// built from it.
 //
 // The home screen is entered on every return from a book, the library or
 // settings, so this runs far more often than load() was written for.

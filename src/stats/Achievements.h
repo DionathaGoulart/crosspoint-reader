@@ -24,8 +24,7 @@ enum class Id : uint8_t {
   Streak7,
   Streak30,
   Streak100,
-  LongSession,   // a single sitting of two hours
-  ThreeLanguages,
+  LongSession,  // a single sitting of two hours
   Count,
 };
 
@@ -35,7 +34,6 @@ inline constexpr size_t kCount = static_cast<size_t>(Id::Count);
 // input is a visible change rather than a quiet widening of what counts.
 struct Inputs {
   stats::Summary summary{};
-  uint32_t distinctLanguages = 0;  // among finished books
 };
 
 // True when the condition holds now. Conditions are monotone: once true for a
@@ -56,9 +54,9 @@ const char* key(Id id);
 
 // What an achievement is about, and the number it asks for. The UI builds its
 // label from these ("%u books", "%u hours", ...) rather than carrying one
-// translated string per achievement: thirteen near-identical strings cost
+// translated string per achievement: a dozen near-identical strings cost
 // flash and translator time for no extra meaning.
-enum class Kind : uint8_t { Books, Hours, Streak, Session, Languages };
+enum class Kind : uint8_t { Books, Hours, Streak, Session };
 Kind kindOf(Id id);
 uint32_t target(Id id);
 

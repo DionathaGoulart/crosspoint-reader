@@ -352,38 +352,35 @@ void testHourBarsScale() {
 
 // --- achievements ------------------------------------------------------------
 
-achievements::Inputs inputsWith(uint32_t books, uint32_t minutes, uint32_t streak, uint32_t longestSession,
-                                uint32_t languages) {
+achievements::Inputs inputsWith(uint32_t books, uint32_t minutes, uint32_t streak, uint32_t longestSession) {
   achievements::Inputs in;
   in.summary.booksFinished = books;
   in.summary.totalMinutes = minutes;
   in.summary.longestStreak = streak;
   in.summary.longestSessionMinutes = longestSession;
-  in.distinctLanguages = languages;
   return in;
 }
 
 void testAchievementThresholds() {
-  CHECK(!achievements::earned(achievements::Id::FirstBook, inputsWith(0, 0, 0, 0, 0)));
-  CHECK(achievements::earned(achievements::Id::FirstBook, inputsWith(1, 0, 0, 0, 0)));
-  CHECK(!achievements::earned(achievements::Id::Books10, inputsWith(9, 0, 0, 0, 0)));
-  CHECK(achievements::earned(achievements::Id::Books10, inputsWith(10, 0, 0, 0, 0)));
-  CHECK(!achievements::earned(achievements::Id::Hours10, inputsWith(0, 599, 0, 0, 0)));
-  CHECK(achievements::earned(achievements::Id::Hours10, inputsWith(0, 600, 0, 0, 0)));
-  CHECK(achievements::earned(achievements::Id::LongSession, inputsWith(0, 0, 0, 120, 0)));
-  CHECK(achievements::earned(achievements::Id::ThreeLanguages, inputsWith(0, 0, 0, 0, 3)));
+  CHECK(!achievements::earned(achievements::Id::FirstBook, inputsWith(0, 0, 0, 0)));
+  CHECK(achievements::earned(achievements::Id::FirstBook, inputsWith(1, 0, 0, 0)));
+  CHECK(!achievements::earned(achievements::Id::Books10, inputsWith(9, 0, 0, 0)));
+  CHECK(achievements::earned(achievements::Id::Books10, inputsWith(10, 0, 0, 0)));
+  CHECK(!achievements::earned(achievements::Id::Hours10, inputsWith(0, 599, 0, 0)));
+  CHECK(achievements::earned(achievements::Id::Hours10, inputsWith(0, 600, 0, 0)));
+  CHECK(achievements::earned(achievements::Id::LongSession, inputsWith(0, 0, 0, 120)));
 }
 
 void testStreakAwardUsesTheRecord() {
   // A broken streak must not take an award back: the condition reads the
   // record, so a current run of zero still leaves a past 7-day run earned.
-  achievements::Inputs in = inputsWith(0, 0, 7, 0, 0);
+  achievements::Inputs in = inputsWith(0, 0, 7, 0);
   in.summary.currentStreak = 0;
   CHECK(achievements::earned(achievements::Id::Streak7, in));
 }
 
 void testNewlyEarnedSkipsWhatIsHeld() {
-  const achievements::Inputs in = inputsWith(10, 0, 0, 0, 0);
+  const achievements::Inputs in = inputsWith(10, 0, 0, 0);
   bool held[achievements::kCount] = {};
   achievements::Id out[achievements::kCount];
   // Fresh: both the first-book and the ten-book awards land.
@@ -395,10 +392,10 @@ void testNewlyEarnedSkipsWhatIsHeld() {
 }
 
 void testProgressPercent() {
-  CHECK_EQ(achievements::progressPercent(achievements::Id::Books10, inputsWith(5, 0, 0, 0, 0)), 50);
-  CHECK_EQ(achievements::progressPercent(achievements::Id::Books10, inputsWith(0, 0, 0, 0, 0)), 0);
+  CHECK_EQ(achievements::progressPercent(achievements::Id::Books10, inputsWith(5, 0, 0, 0)), 50);
+  CHECK_EQ(achievements::progressPercent(achievements::Id::Books10, inputsWith(0, 0, 0, 0)), 0);
   // Never over a hundred, however far past the target the reader is.
-  CHECK_EQ(achievements::progressPercent(achievements::Id::Books10, inputsWith(999, 0, 0, 0, 0)), 100);
+  CHECK_EQ(achievements::progressPercent(achievements::Id::Books10, inputsWith(999, 0, 0, 0)), 100);
 }
 
 void testAwardKeysAreUniqueAndStable() {
@@ -414,6 +411,13 @@ void testAwardKeysAreUniqueAndStable() {
   // Hours are stored in minutes but labelled in hours.
   CHECK_EQ(achievements::target(achievements::Id::Hours50), 50);
   CHECK_EQ(achievements::target(achievements::Id::Books25), 25);
+
+  // The three-languages award was removed on purpose. Its key must not come
+  // back on another award's slot: AchievementStore keys the saved JSON by this
+  // string, so reusing it would hand one reader's old unlock to a new award.
+  for (size_t i = 0; i < achievements::kCount; ++i) {
+    CHECK(std::strcmp(achievements::key(static_cast<achievements::Id>(i)), "languages_3") != 0);
+  }
 }
 
 }  // namespace

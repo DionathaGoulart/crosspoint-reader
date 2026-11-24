@@ -6,7 +6,6 @@
 
 #include <algorithm>
 #include <ctime>
-#include <set>
 #include <string>
 
 #include "AchievementStore.h"
@@ -46,15 +45,6 @@ statsService::Snapshot statsService::load() {
   const uint32_t thisYear = now > 0 ? static_cast<uint32_t>(FINISHED_BOOKS.countInYear(now)) : 0;
 
   snapshot.summary = stats::summarize(*snapshot.aggregate, finishedCount, thisYear, now, tz);
-
-  // Distinct languages among finished books, for the matching achievement.
-  // An unlabelled book counts as no language rather than as its own.
-  std::set<std::string> languages;
-  for (const auto& book : finished) {
-    if (!book.language.empty()) languages.insert(book.language.substr(0, 2));
-  }
-  snapshot.inputs.summary = snapshot.summary;
-  snapshot.inputs.distinctLanguages = static_cast<uint32_t>(languages.size());
   return snapshot;
 }
 
@@ -82,5 +72,5 @@ stats::Summary statsService::summaryOnly() {
 size_t statsService::refreshAchievements(const Snapshot& snapshot, achievements::Id* out, const size_t capacity) {
   if (!snapshot.valid) return 0;
   ACHIEVEMENTS.loadFromFile();
-  return ACHIEVEMENTS.evaluate(snapshot.inputs, trustedtime::trustedNow(), out, capacity);
+  return ACHIEVEMENTS.evaluate(achievements::Inputs{snapshot.summary}, trustedtime::trustedNow(), out, capacity);
 }

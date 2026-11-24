@@ -7,7 +7,7 @@ namespace {
 
 struct Threshold {
   // Which figure the condition reads, and the value it has to reach.
-  enum class Field : uint8_t { BooksFinished, TotalMinutes, LongestStreak, LongestSessionMinutes, Languages } field;
+  enum class Field : uint8_t { BooksFinished, TotalMinutes, LongestStreak, LongestSessionMinutes } field;
   uint32_t target;
 };
 
@@ -24,13 +24,14 @@ constexpr Threshold kThresholds[kCount] = {
     /* Streak30       */ {Threshold::Field::LongestStreak, 30},
     /* Streak100      */ {Threshold::Field::LongestStreak, 100},
     /* LongSession    */ {Threshold::Field::LongestSessionMinutes, 120},
-    /* ThreeLanguages */ {Threshold::Field::Languages, 3},
 };
 
+// These strings are persisted ids. A key removed from this list is never
+// reused for another award, or that award inherits whoever had earned the old
+// one.
 constexpr const char* kKeys[kCount] = {
-    "first_book", "books_10",  "books_25",  "books_50",     "books_100",
-    "hours_10",   "hours_50",  "hours_100", "streak_7",     "streak_30",
-    "streak_100", "session_2h", "languages_3",
+    "first_book", "books_10",  "books_25", "books_50",  "books_100",  "hours_10",
+    "hours_50",   "hours_100", "streak_7", "streak_30", "streak_100", "session_2h",
 };
 
 uint32_t valueOf(const Threshold::Field field, const Inputs& in) {
@@ -45,8 +46,6 @@ uint32_t valueOf(const Threshold::Field field, const Inputs& in) {
       return std::max(in.summary.longestStreak, in.summary.currentStreak);
     case Threshold::Field::LongestSessionMinutes:
       return in.summary.longestSessionMinutes;
-    case Threshold::Field::Languages:
-      return in.distinctLanguages;
   }
   return 0;
 }
@@ -92,8 +91,6 @@ Kind kindOf(const Id id) {
       return Kind::Streak;
     case Threshold::Field::LongestSessionMinutes:
       return Kind::Session;
-    case Threshold::Field::Languages:
-      return Kind::Languages;
   }
   return Kind::Books;
 }

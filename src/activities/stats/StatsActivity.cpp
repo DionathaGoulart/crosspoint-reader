@@ -140,7 +140,9 @@ void StatsActivity::rebuildRows() {
       }
       break;
 
-    case Tab::Awards:
+    case Tab::Awards: {
+      // Built once, not per award: it carries a copy of the summary.
+      const achievements::Inputs inputs{snapshot.summary};
       for (size_t i = 0; i < achievements::kCount; ++i) {
         const auto id = static_cast<achievements::Id>(i);
         const uint32_t goal = achievements::target(id);
@@ -158,9 +160,6 @@ void StatsActivity::rebuildRows() {
           case achievements::Kind::Session:
             label = StrId::STR_ACH_SESSION;
             break;
-          case achievements::Kind::Languages:
-            label = StrId::STR_ACH_LANGUAGES;
-            break;
         }
         std::string value;
         if (ACHIEVEMENTS.isUnlocked(id)) {
@@ -168,11 +167,12 @@ void StatsActivity::rebuildRows() {
           value = shortDate(ACHIEVEMENTS.unlockedEpoch(id));
           if (value.empty()) value = tr(STR_SELECTED);
         } else {
-          value = number(achievements::progressPercent(id, snapshot.inputs)) + "%";
+          value = number(achievements::progressPercent(id, inputs)) + "%";
         }
         add(formatted(label, goal), std::move(value));
       }
       break;
+    }
 
     default:
       break;
