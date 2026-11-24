@@ -1,0 +1,40 @@
+diff --git a/src/HalPowerManager.h b/src/HalPowerManager.h
+index e3b45ac..53a39a7 100644
+--- a/src/HalPowerManager.h
++++ b/src/HalPowerManager.h
+@@ -58,6 +58,13 @@ public:
+   // Get battery percentage (range 0-100)
+   uint16_t getBatteryPercentage() const;
+ 
++  // One fresh reading, mirroring the firmware's gauge API. The simulator has
++  // no gauge to fail, so it reports the same synthetic level and succeeds.
++  bool readBatteryPercentage(uint16_t &percent) const {
++    percent = getBatteryPercentage();
++    return true;
++  }
++
+   // RAII helper class to manage power saving locks
+   // Usage: create an instance of Lock in a scope to disable power saving, for
+   // example when running a task that needs full performance. When the Lock
+diff --git a/src/mbedtls/sha256.h b/src/mbedtls/sha256.h
+index bbcce81..9af55ce 100644
+--- a/src/mbedtls/sha256.h
++++ b/src/mbedtls/sha256.h
+@@ -35,3 +35,17 @@ inline int mbedtls_sha256_finish(mbedtls_sha256_context *ctx, unsigned char outp
+ }
+ 
+ inline void mbedtls_sha256_free(mbedtls_sha256_context *) {}
++
++// One-shot form of the above, as mbedTLS exposes it. Same placeholder digest
++// as the streaming path, so both agree within a simulator run; neither is a
++// real SHA-256, so digests do not match a device's.
++inline int mbedtls_sha256(const unsigned char *input, size_t ilen,
++                          unsigned char output[32], int is224) {
++  mbedtls_sha256_context ctx;
++  mbedtls_sha256_init(&ctx);
++  int rc = mbedtls_sha256_starts(&ctx, is224);
++  if (rc == 0) rc = mbedtls_sha256_update(&ctx, input, ilen);
++  if (rc == 0) rc = mbedtls_sha256_finish(&ctx, output);
++  mbedtls_sha256_free(&ctx);
++  return rc;
++}
