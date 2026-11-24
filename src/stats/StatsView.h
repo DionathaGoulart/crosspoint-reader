@@ -43,9 +43,23 @@ struct Summary {
 Summary summarize(const StatsAggregate& aggregate, uint32_t booksFinished, uint32_t booksThisYear, int64_t now,
                   int tzMinutes);
 
-// "1 h 05" above an hour, "47 min" below it, "--" for zero. Sized for an
-// e-ink tile, so it never spells out words that would need translating.
-void formatDuration(char* out, size_t size, uint32_t minutes);
+// A duration broken into the unit it should be shown in.
+//
+// This layer owns the thresholds -- when minutes give way to hours, and when
+// the trailing minutes stop being worth the tile's width -- and nothing else.
+// The words belong to whoever draws them, because they have to be translated
+// and this header is compiled without I18n so the statistics arithmetic stays
+// testable off the device. statsText::duration() is the device-side caller.
+struct DurationParts {
+  enum Unit : uint8_t { Zero, Minutes, Hours, HoursAndMinutes };
+  Unit unit = Zero;
+  uint32_t hours = 0;
+  uint32_t minutes = 0;
+};
+
+// Splits `minutes` for display: nothing at all, minutes only below an hour,
+// hours and minutes above it, and hours alone past a hundred of them.
+DurationParts splitDuration(uint32_t minutes);
 
 // One row of the month map: `days` cells ending at `summary.today`, each the
 // minutes read that day, oldest first. Returns how many cells were written.

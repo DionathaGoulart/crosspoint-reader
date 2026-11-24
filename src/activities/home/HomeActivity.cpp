@@ -23,13 +23,23 @@
 #include "MappedInputManager.h"
 #include "OpdsServerStore.h"
 #include "RecentBooksStore.h"
+#include "activities/stats/StatsActivity.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
-#include "activities/stats/StatsActivity.h"
 #include "util/BookProgress.h"
+#include "util/BookThumbnail.h"
+
+// The two homes draw the same menu from two lists that have to agree: this
+// file's order (indexToMenuItem, getMenuItemCount, the Lyra label/icon vectors)
+// and CoverGridHomeUi's tab icons. They disagreed once, and the cover-grid
+// home then opened Statistics from the transfer icon and could not reach
+// Settings at all. Adding an entry below without adding its tab icon, or the
+// reverse, now fails to compile here.
+static_assert(CoverGridHomeUi::TAB_POSITIONS == kHomeBaseMenuItems + 1,
+              "CoverGridHomeUi's tab icons must cover the base menu plus the plugins/OPDS slot");
 
 int HomeActivity::getMenuItemCount() const {
-  int count = 5;  // File Browser, Library, Statistics, File transfer, Settings
+  int count = kHomeBaseMenuItems;
   if (!recentBooks.empty()) {
     count += recentBooks.size();
   }
@@ -60,7 +70,7 @@ void HomeActivity::loadRecentBooks(int maxBooks) {
 }
 
 void HomeActivity::fillCoverGridFromLibrary() {
-  if (recentBooks.size() >= CoverGridHomeUi::MAX_BOOKS) return;
+  if (recentBooks.size() >= static_cast<size_t>(CoverGridHomeUi::bookSlots())) return;
   // Keep the index and record together off the task stack; reuse for every row.
   struct LibraryReader {
     library::LibraryIndexFile index;
@@ -83,7 +93,8 @@ void HomeActivity::fillCoverGridFromLibrary() {
       return;
     }
   }
-  for (uint16_t row = 0; row < index.bookCount() && recentBooks.size() < CoverGridHomeUi::MAX_BOOKS; ++row) {
+  const auto slots = static_cast<size_t>(CoverGridHomeUi::bookSlots());
+  for (uint16_t row = 0; row < index.bookCount() && recentBooks.size() < slots; ++row) {
     RecentBook book;
     if (!index.readRecord(index.ordinalForRow(library::SortOrder::RecentDesc, row), record) ||
         !index.readPath(record, book.path))
@@ -125,41 +136,16 @@ void HomeActivity::resolveGridCoverPaths() {
 void HomeActivity::loadGridCover(RecentBook& book, int height, bool& showingLoading, Rect& popupRect) {
   if (!book.coverBmpPath.empty() && Storage.exists(UITheme::getCoverThumbPath(book.coverBmpPath, height).c_str()))
     return;
-  // Only one parser lives at a time; EPUB/XTC objects exceed the stack budget.
-  if (FsHelpers::hasReflowableBookExtension(book.path)) {
-    auto epub = makeUniqueNoThrow<Epub>(book.path, "/.crosspoint");
-    if (!epub) {
-      LOG_ERR("HOME", "OOM: cover EPUB");
-      return;
-    }
-    book.coverBmpPath = epub->getThumbBmpPath();
-    if (Storage.exists(epub->getThumbBmpPath(height).c_str())) return;
-    if (!showingLoading) {
-      showingLoading = true;
-      popupRect = GUI.drawPopup(renderer, tr(STR_LOADING_POPUP));
-      GUI.fillPopupProgress(renderer, popupRect, 0);
-    }
-    if (epub->generateThumbBmpFromSource(height)) {
-      return;
-    }
-  } else if (FsHelpers::hasXtcExtension(book.path)) {
-    auto xtc = makeUniqueNoThrow<Xtc>(book.path, "/.crosspoint");
-    if (!xtc) {
-      LOG_ERR("HOME", "OOM: cover XTC");
-      return;
-    }
-    book.coverBmpPath = xtc->getThumbBmpPath();
-    if (Storage.exists(xtc->getThumbBmpPath(height).c_str())) return;
-    if (!showingLoading) {
-      showingLoading = true;
-      popupRect = GUI.drawPopup(renderer, tr(STR_LOADING_POPUP));
-      GUI.fillPopupProgress(renderer, popupRect, 0);
-    }
-    if (xtc->load() && xtc->generateThumbBmp(height)) {
-      return;
-    }
+  // Probe first so the popup goes up before the slow work, not after it:
+  // building a thumbnail opens the book and rescales its cover, and that is
+  // exactly the wait the popup exists to explain.
+  if (bookthumb::isCached(book.path, height, book.coverBmpPath)) return;
+  if (!showingLoading) {
+    showingLoading = true;
+    popupRect = GUI.drawPopup(renderer, tr(STR_LOADING_POPUP));
+    GUI.fillPopupProgress(renderer, popupRect, 0);
   }
-  book.coverBmpPath.clear();
+  bookthumb::ensure(book.path, height, book.coverBmpPath);
 }
 
 void HomeActivity::loadRecentCovers(int coverHeight) {
@@ -246,7 +232,7 @@ void HomeActivity::onEnter() {
     coverGridUi = makeUniqueNoThrow<CoverGridHomeUi>(renderer);
     if (!coverGridUi) LOG_ERR("HOME", "OOM: cover grid UI; using standard home");
   }
-  loadRecentBooks(coverGridUi ? CoverGridHomeUi::MAX_BOOKS : metrics.homeRecentBooksCount);
+  loadRecentBooks(coverGridUi ? CoverGridHomeUi::bookSlots() : metrics.homeRecentBooksCount);
   hasContinueReading = !recentBooks.empty();
   if (coverGridUi) {
     fillCoverGridFromLibrary();

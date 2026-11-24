@@ -30,6 +30,16 @@ struct Snapshot {
 
 Snapshot load();
 
+// Just the derived figures, for a screen that draws targets rather than the
+// whole statistics surface. Skips the achievement inputs -- the distinct
+// languages walk over every finished book and the std::set it builds -- and
+// releases the ~22 KB aggregate before returning, so nothing of it is held
+// while the caller redraws.
+//
+// The home screen is entered on every return from a book, the library or
+// settings, so this runs far more often than load() was written for.
+stats::Summary summaryOnly();
+
 // The reader's current UTC offset in minutes, the same way the session log
 // records it. Exposed because a screen formatting dates needs the same offset
 // the figures were bucketed with.

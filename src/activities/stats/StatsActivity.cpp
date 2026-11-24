@@ -13,6 +13,7 @@
 #include "fontIds.h"
 #include "stats/AchievementStore.h"
 #include "stats/FinishedBooksStore.h"
+#include "stats/StatsText.h"
 
 namespace fui = freeink::ui;
 
@@ -22,7 +23,7 @@ namespace {
 // screen never disagree about what "1 h 05" means.
 std::string duration(const uint32_t minutes) {
   char buffer[24];
-  stats::formatDuration(buffer, sizeof(buffer), minutes);
+  statsText::duration(buffer, sizeof(buffer), minutes);
   return buffer;
 }
 
@@ -41,7 +42,7 @@ std::string formatted(const StrId id, const uint32_t value) {
 std::string shortDate(const int64_t epoch) {
   if (epoch <= 0) return "";
   const time_t when = static_cast<time_t>(epoch);
-  struct tm local {};
+  struct tm local{};
   localtime_r(&when, &local);
   char buffer[16];
   std::snprintf(buffer, sizeof(buffer), "%02d/%02d/%04d", local.tm_mday, local.tm_mon + 1, local.tm_year + 1900);
@@ -121,8 +122,7 @@ void StatsActivity::rebuildRows() {
         const auto* stat = stats::findBook(*snapshot.aggregate, books[i].document.c_str());
         // The title is what the book called itself when it was finished, so a
         // deleted file still shows a name rather than a path that is gone.
-        add(books[i].title.empty() ? books[i].path : books[i].title,
-            stat != nullptr ? duration(stat->secs / 60) : "");
+        add(books[i].title.empty() ? books[i].path : books[i].title, stat != nullptr ? duration(stat->secs / 60) : "");
         bookOrder.push_back(i);
       }
       break;
@@ -260,8 +260,7 @@ void StatsActivity::drawSummaryPanel() const {
   if (height < 200) return;
 
   if (snapshot.summary.sessionCount == 0) {
-    const char* message =
-        I18N.get(snapshot.clockUnset ? StrId::STR_STATS_CLOCK_UNSET : StrId::STR_STATS_NO_DATA);
+    const char* message = I18N.get(snapshot.clockUnset ? StrId::STR_STATS_CLOCK_UNSET : StrId::STR_STATS_NO_DATA);
     UITheme::drawCenteredWrappedText(renderer, Rect{left, top + height / 3, width, 120}, UI_10_FONT_ID, message, 3);
     return;
   }
@@ -272,7 +271,7 @@ void StatsActivity::drawSummaryPanel() const {
   const int streakHeight = height * 17 / 100;
 
   char value[24];
-  stats::formatDuration(value, sizeof(value), s.totalMinutes);
+  statsText::duration(value, sizeof(value), s.totalMinutes);
   drawStatTile(Rect{left, top, width, heroHeight}, tr(STR_STATS_TOTAL), value, true);
 
   int y = top + heroHeight + gap;
@@ -281,9 +280,9 @@ void StatsActivity::drawSummaryPanel() const {
   const auto cell = [&](int column, int row) {
     return Rect{left + column * (cellWidth + gap), y + row * (cellHeight + gap), cellWidth, cellHeight};
   };
-  stats::formatDuration(value, sizeof(value), s.todayMinutes);
+  statsText::duration(value, sizeof(value), s.todayMinutes);
   drawStatTile(cell(0, 0), tr(STR_STATS_TODAY), value);
-  stats::formatDuration(value, sizeof(value), s.weekMinutes);
+  statsText::duration(value, sizeof(value), s.weekMinutes);
   drawStatTile(cell(1, 0), tr(STR_STATS_WEEK), value);
   std::snprintf(value, sizeof(value), "%u", static_cast<unsigned>(s.booksFinished));
   drawStatTile(cell(0, 1), tr(STR_STATS_BOOKS_FINISHED), value);
@@ -292,9 +291,7 @@ void StatsActivity::drawSummaryPanel() const {
 
   y += gridHeight + gap;
   const int thirdWidth = (width - gap * 2) / 3;
-  const auto third = [&](int column) {
-    return Rect{left + column * (thirdWidth + gap), y, thirdWidth, streakHeight};
-  };
+  const auto third = [&](int column) { return Rect{left + column * (thirdWidth + gap), y, thirdWidth, streakHeight}; };
   std::snprintf(value, sizeof(value), "%u", static_cast<unsigned>(s.currentStreak));
   drawStatTile(third(0), tr(STR_STATS_STREAK), value);
   std::snprintf(value, sizeof(value), "%u", static_cast<unsigned>(s.longestStreak));

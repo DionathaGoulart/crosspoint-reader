@@ -14,22 +14,22 @@ namespace {
 
 int failures = 0;
 
-#define CHECK(cond)                                                            \
-  do {                                                                         \
-    if (!(cond)) {                                                             \
-      std::printf("FAIL %s:%d  %s\n", __FILE__, __LINE__, #cond);              \
-      ++failures;                                                              \
-    }                                                                          \
+#define CHECK(cond)                                               \
+  do {                                                            \
+    if (!(cond)) {                                                \
+      std::printf("FAIL %s:%d  %s\n", __FILE__, __LINE__, #cond); \
+      ++failures;                                                 \
+    }                                                             \
   } while (0)
 
-#define CHECK_EQ(actual, expected)                                                                      \
-  do {                                                                                                  \
-    const long long a_ = static_cast<long long>(actual);                                                \
-    const long long e_ = static_cast<long long>(expected);                                              \
-    if (a_ != e_) {                                                                                     \
-      std::printf("FAIL %s:%d  %s == %lld, expected %lld\n", __FILE__, __LINE__, #actual, a_, e_);      \
-      ++failures;                                                                                       \
-    }                                                                                                   \
+#define CHECK_EQ(actual, expected)                                                                 \
+  do {                                                                                             \
+    const long long a_ = static_cast<long long>(actual);                                           \
+    const long long e_ = static_cast<long long>(expected);                                         \
+    if (a_ != e_) {                                                                                \
+      std::printf("FAIL %s:%d  %s == %lld, expected %lld\n", __FILE__, __LINE__, #actual, a_, e_); \
+      ++failures;                                                                                  \
+    }                                                                                              \
   } while (0)
 
 constexpr char kDocA[] = "0123456789abcdef0123456789abcdef";
@@ -161,8 +161,8 @@ void testWindowQueries() {
   stats::StatsAggregate a;
   stats::reset(a);
   const int32_t day0 = stats::localDayIndex(kEpoch2024, 0);
-  fold(a, line(kDocA, kEpoch2024, 600));                 // 10 min
-  fold(a, line(kDocA, kEpoch2024 + 2 * 86400, 1800));    // 30 min, two days later
+  fold(a, line(kDocA, kEpoch2024, 600));               // 10 min
+  fold(a, line(kDocA, kEpoch2024 + 2 * 86400, 1800));  // 30 min, two days later
   const int32_t today = day0 + 2;
   CHECK_EQ(stats::minutesInWindow(a, today, 7), 40);
   CHECK_EQ(stats::daysReadInWindow(a, today, 7), 2);
@@ -262,19 +262,32 @@ void testExtremeTimezonesAreClamped() {
 
 // --- StatsView ---------------------------------------------------------------
 
-void testFormatDuration() {
-  char buffer[24];
-  stats::formatDuration(buffer, sizeof(buffer), 0);
-  CHECK(std::strcmp(buffer, "--") == 0);
-  stats::formatDuration(buffer, sizeof(buffer), 47);
-  CHECK(std::strcmp(buffer, "47 min") == 0);
-  stats::formatDuration(buffer, sizeof(buffer), 60);
-  CHECK(std::strcmp(buffer, "1 h 00") == 0);
-  stats::formatDuration(buffer, sizeof(buffer), 65);
-  CHECK(std::strcmp(buffer, "1 h 05") == 0);
+void testSplitDuration() {
+  // The thresholds, not the wording: the unit words are translated and are
+  // chosen by statsText::duration(), which needs I18n and so is not built here.
+  auto parts = stats::splitDuration(0);
+  CHECK(parts.unit == stats::DurationParts::Zero);
+
+  parts = stats::splitDuration(47);
+  CHECK(parts.unit == stats::DurationParts::Minutes);
+  CHECK_EQ(parts.minutes, 47);
+
+  // An exact hour already carries the trailing minutes, so a reader sees
+  // "1 h 00" rather than the unit changing under them at 61 minutes.
+  parts = stats::splitDuration(60);
+  CHECK(parts.unit == stats::DurationParts::HoursAndMinutes);
+  CHECK_EQ(parts.hours, 1);
+  CHECK_EQ(parts.minutes, 0);
+
+  parts = stats::splitDuration(65);
+  CHECK(parts.unit == stats::DurationParts::HoursAndMinutes);
+  CHECK_EQ(parts.hours, 1);
+  CHECK_EQ(parts.minutes, 5);
+
   // Past a hundred hours the minutes are dropped rather than shrunk.
-  stats::formatDuration(buffer, sizeof(buffer), 100 * 60 + 30);
-  CHECK(std::strcmp(buffer, "100 h") == 0);
+  parts = stats::splitDuration(100 * 60 + 30);
+  CHECK(parts.unit == stats::DurationParts::Hours);
+  CHECK_EQ(parts.hours, 100);
 }
 
 void testSummaryWithoutAClock() {
@@ -300,7 +313,7 @@ void testSummaryAverages() {
   const int64_t now = kEpoch2024 + 4 * 86400 + 7200;
   const stats::Summary s = stats::summarize(a, 2, 1, now, 0);
   CHECK_EQ(s.totalMinutes, 180);
-  CHECK_EQ(s.avgMinutesPerReadDay, 90);   // 180 / 2 days read
+  CHECK_EQ(s.avgMinutesPerReadDay, 90);      // 180 / 2 days read
   CHECK_EQ(s.avgMinutesPerCalendarDay, 36);  // 180 / 5 days elapsed
   CHECK_EQ(s.booksFinished, 2);
   CHECK_EQ(s.booksThisYear, 1);
@@ -310,8 +323,8 @@ void testSummaryAverages() {
 void testMonthMapIsOldestFirst() {
   stats::StatsAggregate a;
   stats::reset(a);
-  fold(a, line(kDocA, kEpoch2024, 600));              // 10 min, 2 days ago
-  fold(a, line(kDocA, kEpoch2024 + 2 * 86400, 1800)); // 30 min, today
+  fold(a, line(kDocA, kEpoch2024, 600));               // 10 min, 2 days ago
+  fold(a, line(kDocA, kEpoch2024 + 2 * 86400, 1800));  // 30 min, today
   const int32_t today = stats::localDayIndex(kEpoch2024, 0) + 2;
   uint16_t days[3];
   CHECK_EQ(stats::monthMap(a, today, 3, days, 3), 3);
@@ -420,7 +433,7 @@ int main() {
   testBookTableOverflowKeepsTheHeaviestBooks();
   testSubMinuteSessionsStillMarkTheDay();
   testExtremeTimezonesAreClamped();
-  testFormatDuration();
+  testSplitDuration();
   testSummaryWithoutAClock();
   testSummaryAverages();
   testMonthMapIsOldestFirst();

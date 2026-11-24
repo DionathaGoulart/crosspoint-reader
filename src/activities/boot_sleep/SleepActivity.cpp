@@ -10,6 +10,7 @@
 #include <GfxRenderer.h>
 #include <HalDisplay.h>
 #include <HalGPIO.h>
+#include <HalPowerManager.h>
 #include <HalStorage.h>
 #include <I18n.h>
 #include <Memory.h>
@@ -27,11 +28,13 @@
 #include "CrossPointSettings.h"
 #include "CrossPointState.h"
 #include "activities/reader/ReaderUtils.h"
-#include "stats/StatsService.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
 #include "images/Logo120.h"
 #include "images/MoonIcon.h"
+#include "stats/GoalsSettings.h"
+#include "stats/StatsService.h"
+#include "stats/StatsText.h"
 
 namespace {
 // Metalio: B/W sleep images use the full 0xF7 waveform instead of HALF (two
@@ -860,13 +863,13 @@ void SleepActivity::renderStatsSleepScreen() const {
     const char* label;
   };
   Tile tiles[4];
-  stats::formatDuration(tiles[0].value, sizeof(tiles[0].value), s.totalMinutes);
+  statsText::duration(tiles[0].value, sizeof(tiles[0].value), s.totalMinutes);
   tiles[0].label = tr(STR_STATS_TOTAL);
   std::snprintf(tiles[1].value, sizeof(tiles[1].value), "%u", static_cast<unsigned>(s.booksFinished));
   tiles[1].label = tr(STR_STATS_BOOKS_FINISHED);
   std::snprintf(tiles[2].value, sizeof(tiles[2].value), "%u", static_cast<unsigned>(s.currentStreak));
   tiles[2].label = tr(STR_STATS_STREAK);
-  stats::formatDuration(tiles[3].value, sizeof(tiles[3].value), s.todayMinutes);
+  statsText::duration(tiles[3].value, sizeof(tiles[3].value), s.todayMinutes);
   tiles[3].label = tr(STR_STATS_TODAY);
 
   const int cellWidth = (pageWidth - margin * 2) / 2;
@@ -926,15 +929,18 @@ void SleepActivity::renderStatsSleepScreen() const {
 //
 // A photo on a one-bit panel leaves no legible place for text, so the numbers
 // get a solid white strip of their own rather than being drawn over the
-// picture and lost in it. The strip takes a sixth of the height; the rest is
-// wallpaper, which is the point of the mode.
+// picture and lost in it. The strip is only as tall as the type it holds; the
+// rest is wallpaper, which is the point of the mode.
 void SleepActivity::renderStatsOverWallpaperSleepScreen() const {
   const int pageWidth = renderer.getScreenWidth();
   const int pageHeight = renderer.getScreenHeight();
 
-  auto snapshot = statsService::load();
+  // Summary only: this band draws four numbers and never touches the month map,
+  // and it runs on the way into deep sleep, where the ~22 KB aggregate would be
+  // claimed at the most fragmented moment of the session.
+  const stats::Summary s = statsService::summaryOnly();
   // No figures yet: the plain wallpaper is a better screen than an empty band.
-  if (!snapshot.valid || snapshot.summary.sessionCount == 0) {
+  if (s.sessionCount == 0) {
     renderCustomSleepScreen();
     return;
   }
@@ -969,36 +975,75 @@ void SleepActivity::renderStatsOverWallpaperSleepScreen() const {
     file.close();
   }
 
-  const stats::Summary& s = snapshot.summary;
-  const int bandHeight = pageHeight / 6;
+  const auto daily = goals::progressFor(goals::Id::DailyMinutes, goalTargetsFromSettings(), s);
+
+  // Three figures: the streak, today against its goal, and the battery.
+  //
+  // Battery earns the third slot because it is the one fact a sleeping reader
+  // cannot get any other way without waking the device.
+  struct Figure {
+    char value[24];
+    const char* label;
+  };
+  Figure figures[3];
+  std::snprintf(figures[0].value, sizeof(figures[0].value), "%u", static_cast<unsigned>(s.currentStreak));
+  figures[0].label = tr(STR_STATS_STREAK);
+  if (daily.enabled) {
+    // Same "done/target" form the goals home uses, so the two screens do not
+    // describe the same number two ways.
+    std::snprintf(figures[1].value, sizeof(figures[1].value), tr(STR_GOAL_MINUTES_PAIR),
+                  static_cast<unsigned>(daily.current), static_cast<unsigned>(daily.target));
+  } else {
+    // No goal set: the plain figure. A bar with no target to fill would be a
+    // control the reader never asked for.
+    statsText::duration(figures[1].value, sizeof(figures[1].value), s.todayMinutes);
+  }
+  figures[1].label = tr(STR_STATS_TODAY);
+  std::snprintf(figures[2].value, sizeof(figures[2].value), "%u%%",
+                static_cast<unsigned>(powerManager.getBatteryPercentage()));
+  figures[2].label = tr(STR_BATTERY);
+
+  // Height follows the type rather than a fixed fraction of the screen, so the
+  // band is only as tall as the two lines and the bar it holds.
+  constexpr int kPad = 12;
+  constexpr int kValueToLabel = 4;
+  constexpr int kBarHeight = 6;
+  constexpr int kBarGap = 5;
+  const int valueHeight = renderer.getLineHeight(UI_12_FONT_ID);
+  const int labelHeight = renderer.getLineHeight(SMALL_FONT_ID);
+  const int barBlock = daily.enabled ? kBarGap + kBarHeight : 0;
+  const int bandHeight = kPad + valueHeight + barBlock + kValueToLabel + labelHeight + kPad;
   const int bandTop = pageHeight - bandHeight;
   renderer.fillRect(0, bandTop, pageWidth, bandHeight, false);
   // One hairline where the picture meets the band, so the two read as separate
   // surfaces instead of the photo appearing to fade out.
   renderer.fillRect(0, bandTop, pageWidth, 2, true);
 
-  struct Figure {
-    char value[24];
-    const char* label;
-  };
-  Figure figures[3];
-  stats::formatDuration(figures[0].value, sizeof(figures[0].value), s.totalMinutes);
-  figures[0].label = tr(STR_STATS_TOTAL);
-  std::snprintf(figures[1].value, sizeof(figures[1].value), "%u", static_cast<unsigned>(s.currentStreak));
-  figures[1].label = tr(STR_STATS_STREAK);
-  stats::formatDuration(figures[2].value, sizeof(figures[2].value), s.todayMinutes);
-  figures[2].label = tr(STR_STATS_TODAY);
+  // The middle column carries a number, a slash, another number and a bar, so
+  // it gets half the width and the two single figures a quarter each.
+  const int sideWidth = pageWidth / 4;
+  const int columnX[3] = {0, sideWidth, sideWidth + (pageWidth - sideWidth * 2)};
+  const int columnWidth[3] = {sideWidth, pageWidth - sideWidth * 2, sideWidth};
 
-  const int column = pageWidth / 3;
-  const int valueY = bandTop + bandHeight / 2 - 6;
-  const int labelY = bandTop + bandHeight - 26;
+  const int valueY = bandTop + kPad;
+  const int labelY = valueY + valueHeight + barBlock + kValueToLabel;
   for (int i = 0; i < 3; ++i) {
-    const int cx = column * i;
     const int valueWidth = renderer.getTextWidth(UI_12_FONT_ID, figures[i].value, EpdFontFamily::BOLD);
-    renderer.drawText(UI_12_FONT_ID, cx + (column - valueWidth) / 2, valueY, figures[i].value, true,
+    renderer.drawText(UI_12_FONT_ID, columnX[i] + (columnWidth[i] - valueWidth) / 2, valueY, figures[i].value, true,
                       EpdFontFamily::BOLD);
     const int labelWidth = renderer.getTextWidth(SMALL_FONT_ID, figures[i].label);
-    renderer.drawText(SMALL_FONT_ID, cx + (column - labelWidth) / 2, labelY, figures[i].label);
+    renderer.drawText(SMALL_FONT_ID, columnX[i] + (columnWidth[i] - labelWidth) / 2, labelY, figures[i].label);
+  }
+
+  if (daily.enabled) {
+    // Outline plus fill, so an unmet goal still shows how far the day has to
+    // go. percent is already clamped to 100, so the fill cannot overrun.
+    const int barWidth = columnWidth[1] * 2 / 3;
+    const int barX = columnX[1] + (columnWidth[1] - barWidth) / 2;
+    const int barY = valueY + valueHeight + kBarGap;
+    renderer.drawRect(barX, barY, barWidth, kBarHeight, true);
+    const int fill = barWidth * daily.percent / 100;
+    if (fill > 0) renderer.fillRect(barX, barY, fill, kBarHeight, true);
   }
 
   // No invertScreen() here: the wallpaper carries its own tone, and inverting

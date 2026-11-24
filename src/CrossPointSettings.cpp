@@ -124,6 +124,14 @@ void CrossPointSettings::toJson(JsonDocument& doc) const {
     doc["keyboardLayouts"] = keyboardLayouts;
   }
 
+  // Reading goals: uint16_t, so outside the generic loop. Each is omitted while
+  // zero (off), which keeps settings.json unchanged for anyone who never sets
+  // a goal.
+  if (goalDailyMinutes != 0) doc["goalDailyMinutes"] = goalDailyMinutes;
+  if (goalWeeklyMinutes != 0) doc["goalWeeklyMinutes"] = goalWeeklyMinutes;
+  if (goalStreakDays != 0) doc["goalStreakDays"] = goalStreakDays;
+  if (goalBooksPerYear != 0) doc["goalBooksPerYear"] = goalBooksPerYear;
+
   bleturner::writeJson(ble, doc);
 }
 
@@ -314,6 +322,18 @@ bool CrossPointSettings::fromJson(JsonVariantConst doc) {
   if (doc["keyboardLayouts"].is<uint16_t>()) {
     keyboardLayouts = doc["keyboardLayouts"].as<uint16_t>();
   }
+
+  // Reading goals. Absent means off. Clamped on read so a hand-edited or
+  // corrupted settings.json cannot produce a target no reader could ever meet,
+  // which would leave a progress bar pinned near zero with no way to see why.
+  const auto readGoal = [&doc](const char* key, const uint16_t maxValue) -> uint16_t {
+    if (!doc[key].is<uint16_t>()) return 0;
+    return std::min(doc[key].as<uint16_t>(), maxValue);
+  };
+  goalDailyMinutes = readGoal("goalDailyMinutes", GOAL_MAX_DAILY_MINUTES);
+  goalWeeklyMinutes = readGoal("goalWeeklyMinutes", GOAL_MAX_WEEKLY_MINUTES);
+  goalStreakDays = readGoal("goalStreakDays", GOAL_MAX_STREAK_DAYS);
+  goalBooksPerYear = readGoal("goalBooksPerYear", GOAL_MAX_BOOKS_PER_YEAR);
 
   if (!bleturner::readJson(ble, doc)) {
     needsResave = true;

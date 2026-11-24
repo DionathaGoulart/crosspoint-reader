@@ -184,6 +184,32 @@ bool hasReflowableBookExtension(std::string_view fileName) {
   return hasEpubExtension(fileName) || hasTxtExtension(fileName) || hasMarkdownExtension(fileName);
 }
 
+// Every format the library indexes. One array so the test that decides what
+// gets indexed and the strip that shortens its display name cannot drift: a new
+// format is added here and both follow.
+static constexpr const char* BOOK_EXTENSIONS[] = {".epub", ".xtch", ".xtc", ".txt", ".md"};
+
+bool hasBookExtension(std::string_view fileName) {
+  for (const char* extension : BOOK_EXTENSIONS) {
+    if (checkFileExtension(fileName, extension)) return true;
+  }
+  return false;
+}
+
+bool stripBookExtension(std::string& name) {
+  for (const char* extension : BOOK_EXTENSIONS) {
+    // std::string_view explicitly: a std::string argument is ambiguous between
+    // this overload and the Arduino String one, which the host test's String
+    // stub accepts it for even though the device's does not.
+    if (!checkFileExtension(std::string_view{name}, extension)) continue;
+    const size_t keep = name.size() - strlen(extension);
+    if (keep == 0) return false;
+    name.resize(keep);
+    return true;
+  }
+  return false;
+}
+
 bool hasCssExtension(std::string_view fileName) { return checkFileExtension(fileName, ".css"); }
 
 std::string extractFolderPath(const std::string& filePath) {

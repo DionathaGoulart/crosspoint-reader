@@ -20,6 +20,7 @@
 #include "SdCardFontSystem.h"
 #include "XtcReaderActivity.h"
 #include "activities/RenderLock.h"
+#include "stats/FinishedBooksStore.h"
 #include "sync/ReadingSessionLog.h"
 #include "util/PluginEvents.h"
 
@@ -137,6 +138,23 @@ void ReaderActivity::onExit() {
 
 void ReaderActivity::prepareForSleep() { flushReaderSession(); }
 
+void ReaderActivity::recordFinishedIfAtEnd(const bool atEnd) {
+  if (!atEnd) {
+    finishedRecorded = false;
+    return;
+  }
+  if (finishedRecorded) return;
+  // An unset clock cannot date the entry, so recordFinished() refuses it. Leave
+  // the latch open in that case: NTP may set the clock while the reader is
+  // still sitting on the last page, and a later pass should then record it.
+  if (trustedtime::trustedNow() <= 0) return;
+  // Recorded whether or not the move-to-Read-folder setting is on: the shelf of
+  // finished books must not depend on a setting. markFinished() keeps the first
+  // date, so re-reaching the end costs one no-op save.
+  finishedbooks::recordFinished(bookPath, getBookTitle(), getBookAuthor(), getBookLanguage());
+  finishedRecorded = true;
+}
+
 void ReaderActivity::flushReaderSession() {
   if (!readerSession.isEmitWorthy()) {
     readerSession.reset();
@@ -238,6 +256,7 @@ bool ReaderActivity::handleEndOfBookPageTurn(const bool prevTriggered, const boo
 void ReaderActivity::loop() {
   rememberBookOnceRendered();
   clearEndOfBookOptionsIfNeeded();
+  recordFinishedIfAtEnd(isAtEndOfBook());
   if (handleEndOfBookMenu()) return;
   if (handleFormatInput()) return;
   if (handleBackNavigation()) return;

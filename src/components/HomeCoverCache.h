@@ -13,7 +13,9 @@ class GfxRenderer;
 // Screen-lifetime thumbnail decoding and PSRAM region snapshots.
 class HomeCoverCache {
  public:
-  static constexpr size_t MAX_COVERS = 7;
+  // Seven for the home (one hero plus a 3x2 grid), nine for the library's
+  // 3x3 page. The PSRAM buffer is sized from this in begin().
+  static constexpr size_t MAX_COVERS = 9;
   explicit HomeCoverCache(GfxRenderer& renderer) : renderer(renderer) {}
   void begin();
   void prepare();

@@ -216,6 +216,15 @@ void forEachBaseSetting(SettingVisitor visit, void* context) {
                            "libraryUseMetadata", StrId::STR_CAT_SYSTEM));
   emit(SettingInfo::Toggle(StrId::STR_LIBRARY_RECENT_OPENED_ONLY, &CrossPointSettings::libraryRecentOpenedOnly,
                            "libraryRecentOpenedOnly", StrId::STR_CAT_SYSTEM));
+  {
+    // Emitted on every board so the key keeps round-tripping through
+    // settings.json; a conditional emit would drop it on the next save for
+    // anyone without PSRAM. Same shape as fadingFix above.
+    auto covers = SettingInfo::Toggle(StrId::STR_LIBRARY_COVER_VIEW, &CrossPointSettings::libraryCoverView,
+                                      "libraryCoverView", StrId::STR_CAT_SYSTEM);
+    if (!UITheme::supportsCoverGrid()) covers.withWebHidden();
+    emit(covers);
+  }
   emit(SettingInfo::Toggle(StrId::STR_REMOVE_READ_FROM_RECENTS, &CrossPointSettings::removeReadBooksFromRecents,
                            "removeReadBooksFromRecents", StrId::STR_CAT_SYSTEM));
   emit(SettingInfo::Toggle(StrId::STR_MOVE_FINISHED_TO_READ, &CrossPointSettings::moveFinishedToReadFolder,

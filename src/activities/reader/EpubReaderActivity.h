@@ -62,9 +62,6 @@ class EpubReaderActivity final : public ReaderActivity {
   bool recentsEntryRemoved = false;
   unsigned long bookmarkMessageTime = 0UL;
   bool pendingReadFolderMove = false;
-  // Guards the finished-book record against firing on every render() while the
-  // reader sits on the last page. Cleared when the reader leaves the end.
-  bool finishedRecorded = false;
 
   // Toolbar reader menu (SETTINGS.readerMenuStyle == READER_MENU_TOOLBAR): drawn
   // over the page instead of pushing the full-screen list menu. Select opens the
@@ -252,6 +249,7 @@ class EpubReaderActivity final : public ReaderActivity {
   void beginLoanTimeSync();
   std::string getBookTitle() const override { return epub ? epub->getTitle() : ""; }
   std::string getBookAuthor() const override { return epub ? epub->getAuthor() : ""; }
+  std::string getBookLanguage() const override { return epub ? epub->getLanguage() : ""; }
   std::string getBookThumbBmpPath() const override { return epub ? epub->getThumbBmpPath() : ""; }
   int getProgressBasisPoints() const override;
   void renderBook() override;

@@ -88,6 +88,11 @@ class LibraryIndexFile {
 
   // Absolute path of the book, rebuilt from its folder record.
   bool readPath(const ClixRecord& record, std::string& out);
+  // The folder as the builder stored it: "/" for the card root, otherwise a
+  // path without a trailing slash. Empty only on failure.
+  // Costs one seek per preceding folder, so a caller that needs it per row
+  // asks only when the id changes, not once per book.
+  bool readFolderPath(uint16_t folderId, std::string& out);
 
  private:
   bool openImpl(const char* path, bool acceptStaleFold);

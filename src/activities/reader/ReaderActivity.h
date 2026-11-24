@@ -22,6 +22,9 @@ class ReaderActivity : public Activity {
   ReaderSession readerSession;
   std::atomic<bool> pageRendered{false};
   bool bookRemembered = false;
+  // Guards the finished-book record against firing on every loop while the
+  // reader sits on the last page. Cleared when the reader leaves the end.
+  bool finishedRecorded = false;
   void markPageRendered() { pageRendered.store(true, std::memory_order_release); }
   void rememberBookOnceRendered();
 
@@ -34,6 +37,10 @@ class ReaderActivity : public Activity {
   virtual bool handleLoadFailure() { return false; }
   virtual std::string getBookTitle() const = 0;
   virtual std::string getBookAuthor() const { return ""; }
+  // BCP-47 tag the finished-book shelf records, for the distinct-languages
+  // achievement. Empty is a valid answer: a format that carries no language
+  // (XTC) records the book without one rather than guessing.
+  virtual std::string getBookLanguage() const { return ""; }
   virtual std::string getBookThumbBmpPath() const { return ""; }
   // Whole-book progress for the reader.exit plugin event, reusing the
   // per-reader ScreenshotInfo implementations.
@@ -70,6 +77,14 @@ class ReaderActivity : public Activity {
   void disableFastInitialRefresh();
   void notePageTurn(bool forward, bool succeeded);
   void flushReaderSession();
+  // Records the book on the finished shelf the first time the reader reaches
+  // its end, and re-arms when the reader leaves the end. Lives here, not in a
+  // format subclass, so every reader that reaches an end is counted.
+  //
+  // `atEnd` is passed rather than read from isAtEndOfBook() because the EPUB
+  // reader's own end test additionally requires a non-empty spine; taking the
+  // virtual here would file a spine-less book as finished.
+  void recordFinishedIfAtEnd(bool atEnd);
 
  public:
   ~ReaderActivity() override = default;

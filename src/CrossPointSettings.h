@@ -211,7 +211,17 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
   };
 
   // UI Theme
-  enum UI_THEME { CLASSIC = 0, LYRA = 1, LYRA_3_COVERS = 2, ROUNDEDRAFF = 3, COVER_GRID = 4 };
+  // Append only: the value is persisted in settings.json, so renumbering an
+  // existing theme would move every reader to a different one.
+  //
+  // GOALS_HOME is this fork's and takes upstream's next free number, which is a
+  // known merge hazard: if upstream ever adds a theme at 5, every settings.json
+  // here points at theirs and the reader has to pick the theme again. A
+  // fork-reserved number would avoid it, but uiTheme is an ENUM in the generic
+  // settings loop, which clamps anything at or above the label count back to
+  // the default -- so a sparse value needs uiTheme lifted out of that loop
+  // entirely. Not worth that for a one-time, recoverable reselection.
+  enum UI_THEME { CLASSIC = 0, LYRA = 1, LYRA_3_COVERS = 2, ROUNDEDRAFF = 3, COVER_GRID = 4, GOALS_HOME = 5 };
 
   // Image rendering in EPUB reader. IMAGES_DISPLAY_BW lays images out like
   // IMAGES_DISPLAY but draws them as a B/W dither, so image pages skip the
@@ -403,6 +413,9 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
   // Show the title and author read from inside each book rather than its
   // filename. Users can disable this to make index rebuilds skip EPUB parsing.
   uint8_t libraryUseMetadata = 1;
+  // Library shows a grid of covers instead of a list of titles (0 = list, 1 = covers).
+  // Needs PSRAM for the cover cache; ignored where there is none.
+  uint8_t libraryCoverView = 0;
   // Library Recent tab lists only opened books, without the by-arrival list below them (0 = off, 1 = on)
   uint8_t libraryRecentOpenedOnly = 0;
   // Remove a book from the Recent Books list when its End-of-Book screen is reached (0 = off, 1 = on)
@@ -448,6 +461,28 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
   // books someone reads is not necessarily the language of their UI.
   // See keyboard_layouts:: for the bit assignment and the defaulting rules.
   uint16_t keyboardLayouts = 0;
+  // Reading goals. Minutes for the two time goals, days for the streak, books
+  // for the year. Zero means the goal is off, which is the default: a reader
+  // who never opens the goals screen is never shown a target they did not set.
+  //
+  // uint16_t because a weekly minute target passes 255 at well under an hour a
+  // day, so these do not fit the uint8_t generic settings loop and are
+  // persisted by hand below, like keyboardLayouts. The progress arithmetic
+  // lives in src/stats/Goals.h; nothing here measures anything.
+  //
+  // The caps are what the figures behind them can actually represent, not round
+  // numbers: a streak past the aggregate's 730-day ring cannot be counted at
+  // all (stats::kDayCount), and the finished shelf keeps 500 books
+  // (FinishedBooksStore::MAX_BOOKS). A target above either would be a goal the
+  // firmware could never report as met.
+  static constexpr uint16_t GOAL_MAX_DAILY_MINUTES = 600;    // ten hours in one day
+  static constexpr uint16_t GOAL_MAX_WEEKLY_MINUTES = 4200;  // seven of the above
+  static constexpr uint16_t GOAL_MAX_STREAK_DAYS = 730;
+  static constexpr uint16_t GOAL_MAX_BOOKS_PER_YEAR = 500;
+  uint16_t goalDailyMinutes = 0;
+  uint16_t goalWeeklyMinutes = 0;
+  uint16_t goalStreakDays = 0;
+  uint16_t goalBooksPerYear = 0;
   // Bluetooth page turner, saved under the keys lib/BlePageTurner reads and writes (BlePageTurnerJson.h).
   bleturner::Config ble;
   // Quick Resume: keep current content visible with moon icon instead of showing a static sleep screen.

@@ -7,14 +7,15 @@
 #include <string>
 #include <vector>
 
+#include "LibraryCoverGrid.h"
 #include "RecentBooksStore.h"
 #include "activities/UiTabListActivity.h"
 #include "components/OptionPopup.h"
 
-// One Library screen: every indexed book on the card shown by recency, title,
-// or author. The Recent shelf orders by file modification time (when a book
-// landed on the card) and pins the recently OPENED books from RecentBooksStore
-// on top, so active reads and fresh arrivals share one list.
+// One Library screen: every indexed book on the card, shown by recency, title,
+// author, or the folder it sits in, as a list of names or a shelf of covers. The Recent shelf orders by file
+// modification time (when a book landed on the card) and pins the recently OPENED books from RecentBooksStore on top,
+// so active reads and fresh arrivals share one list.
 //
 // The two-slot row is the whole point rather than a styling choice: the problem
 // being solved is "I cannot find my books because I do not know the authors",
@@ -29,7 +30,7 @@
 // ListItems for at most one page). The ordinary shelf therefore keeps one page
 // of strings; an active search additionally uses one fallible uint16_t slot per
 // indexed book so an allocation failure remains recoverable on the C3.
-class LibraryListActivity final : public UiTabListActivity {
+class LibraryListActivity final : public UiTabListActivity, private LibraryCoverGrid::Source {
  public:
   LibraryListActivity(GfxRenderer& renderer, MappedInputManager& mappedInput);
 
@@ -109,14 +110,41 @@ class LibraryListActivity final : public UiTabListActivity {
   int rowFor(int entry) const;
   // fileName, when asked for, is the on-card name the row's icon derives from
   // (the display title may come from metadata and carry no extension).
-  bool rowTextFor(int entry, std::string& title, std::string& author, std::string* fileName = nullptr);
+  // folderId, when asked for, is the row's folder in the index. Reported here
+  // because this already has the record in hand: deriving it again per row
+  // would re-read it, and resolving the path per row would walk the folder
+  // section on the render task.
+  // `author` may be null, and callers that do not draw one should pass null:
+  // resolving it costs two extra index seeks and, past the small-string
+  // limit, a heap allocation.
+  bool rowTextFor(int entry, std::string& title, std::string* author, std::string* fileName = nullptr,
+                  uint16_t* folderId = nullptr);
   uint32_t titleInitialFor(int entry);
   bool buildGroupStarts();
+  // Folders tab: display order for every indexed book, grouped by the folder
+  // it sits in on the card and title-sorted inside each folder.
+  //
+  // A counting sort over ClixRecord::folderId, which the index already stores
+  // per book, so this needs no new index field and no format bump. One u16 per
+  // book (at most 8 KiB at CLIX_MAX_RECORDS) held only while the tab is open.
+  bool buildFolderOrder();
+  bool folderTabActive() const;
   int groupForBook(int bookEntry) const;
   bool groupable() const;
 
   // Screen building
   void buildHeader(UiScreen& screen);
+  // Cover view: the same rows as the list, drawn as a grid of cover art.
+  // Gated on the setting and on PSRAM, since the cover cache lives there.
+  bool coverViewActive() const;
+
+  // --- LibraryCoverGrid::Source --------------------------------------------
+  // The grid asks for rows through these rather than re-deriving the mapping:
+  // a pinned recent, a search hit and a folder row all resolve differently,
+  // and rowFor() alone is wrong for the first of them.
+  int coverCount() const override;
+  bool coverPathFor(int entry, std::string& out) override;
+  bool coverLabelFor(int entry, std::string& out) override;
   // Materializes ListItems and their strings for the visible window only.
   void buildRows(UiScreen& screen);
   static void formatInitialHeading(uint32_t initial, std::string& out);
@@ -164,6 +192,15 @@ class LibraryListActivity final : public UiTabListActivity {
   uint16_t filteredCount = 0;
   bool filterFailed = false;
 
+  // Display order for the Folders tab: one row per book, grouped by folder.
+  // At most one u16 per indexed book (8 KiB at CLIX_MAX_RECORDS), held only
+  // while that tab is open.
+  std::unique_ptr<uint16_t[]> folderRows;
+  uint16_t folderRowCount = 0;
+  // Set when the folder order could not be allocated, so the tab degrades to
+  // the plain title order instead of showing an empty shelf.
+  bool folderOrderFailed = false;
+
   // One start row per group. Grouping is only offered for the sorted <=512-book
   // index, so this fallible allocation is at most 1 KiB and is reused after its
   // first successful allocation.
@@ -196,4 +233,8 @@ class LibraryListActivity final : public UiTabListActivity {
   // Row options modal (Recent long-press menu); owned here so it outlives the
   // touch event that opened it.
   OptionPopup optionPopup;
+
+  // Cover shelf. Holds no PSRAM until the reader opens the view, and dies
+  // with the activity.
+  LibraryCoverGrid coverGrid{renderer};
 };

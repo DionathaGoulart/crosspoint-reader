@@ -14,8 +14,11 @@
 #include "icons/book.h"
 #include "icons/folder.h"
 #include "icons/library.h"
+#include "icons/recent.h"
 #include "icons/settings2.h"
 #include "icons/transfer.h"
+#include "stats/GoalsSettings.h"
+#include "stats/StatsService.h"
 #include "util/BookProgress.h"
 
 namespace fui = freeink::ui;
@@ -30,6 +33,8 @@ constexpr int COVER_ROW_EXTRA_HEIGHT = 8;
 CoverGridHomeUi::CoverGridHomeUi(GfxRenderer& renderer)
     : UiAppHost(renderer), coverCache(renderer), renderer(renderer) {}
 
+int CoverGridHomeUi::bookSlots() { return UITheme::hasGoalsHome() ? 1 : MAX_BOOKS; }
+
 void CoverGridHomeUi::begin(const std::vector<RecentBook>& recent, const SlotTab slot, bool continuing) {
   books = &recent;
   slotTab = slot;
@@ -41,6 +46,14 @@ void CoverGridHomeUi::begin(const std::vector<RecentBook>& recent, const SlotTab
   refreshCoverPaths();
   progress = hasContinueReading && !books->empty() ? loadBookProgress(books->front().path) : -1;
   if (progress >= 0) snprintf(progressText, sizeof(progressText), "%d%%", progress);
+
+  goalsMode = UITheme::hasGoalsHome();
+  if (goalsMode) {
+    // Once per entry, not once per repaint, and only the figures the targets
+    // are measured against: the full load() also builds the achievement inputs
+    // this screen never reads.
+    summary = statsService::summaryOnly();
+  }
 }
 
 void CoverGridHomeUi::refreshCoverPaths() {
@@ -130,6 +143,9 @@ void CoverGridHomeUi::draw(UiScreen& screen) {
     return rect;
   };
   if (books->empty()) {
+    // The goals strip still draws: a reader who has set targets but not yet
+    // opened a book should see them, not only the empty-shelf message.
+    if (goalsMode) drawGoals(screen, screen.takeTop(goalsStripHeight(screen), theme.spaceSm));
     drawTabs(screen, fitTabWidth(tabRect.inset(fui::Insets{0, COVER_CELL_INSET, 0, COVER_CELL_INSET})));
     drawEmpty(screen);
     drawHeaderBand();
@@ -146,10 +162,25 @@ void CoverGridHomeUi::draw(UiScreen& screen) {
   const int16_t featuredHeight = std::min<int>(
       body.height, std::max<int>(coverRowHeight, screen.target().lineHeight(theme.bodyText.font) * (landscape ? 1 : 2) +
                                                      screen.target().lineHeight(theme.smallText.font) * 2 + 32));
-  drawCurrent(screen, screen.takeTop(featuredHeight, theme.spaceSm), coverRowHeight);
-  drawGrid(screen);
-  tabRect.x = gridBounds.x + grid.cellInset.left;
-  tabRect.width = gridBounds.width - grid.cellInset.left - grid.cellInset.right;
+  if (goalsMode) {
+    // Goals above, cover below: the targets are the reason to look, the cover
+    // is the reason to pick the device up. The cover keeps whatever is left,
+    // so it stays the largest thing on the screen.
+    drawGoals(screen, screen.takeTop(goalsStripHeight(screen), theme.spaceSm));
+    // The cover takes everything the goals left, across half the width.
+    const fui::Rect coverArea = screen.body();
+    drawCurrent(screen, coverArea, coverArea.height, 2);
+  } else {
+    drawCurrent(screen, screen.takeTop(featuredHeight, theme.spaceSm), coverRowHeight, GRID_COLUMNS);
+    drawGrid(screen);
+  }
+  if (!goalsMode) {
+    // The tabs line up with the grid's cover columns. Goals mode draws no
+    // grid, so gridBounds is unset there and the tabs keep the rect
+    // takeBottom() already gave them.
+    tabRect.x = gridBounds.x + grid.cellInset.left;
+    tabRect.width = gridBounds.width - grid.cellInset.left - grid.cellInset.right;
+  }
   drawTabs(screen, fitTabWidth(tabRect));
   drawHeaderBand();
 }
@@ -182,7 +213,7 @@ void CoverGridHomeUi::drawEmpty(UiScreen& screen) {
   screen.target().text(fui::Rect{body.x, y, body.width, messageHeight}, tr(STR_START_READING), message);
 }
 
-void CoverGridHomeUi::drawCurrent(UiScreen& screen, fui::Rect rect, const int coverRowHeight) {
+void CoverGridHomeUi::drawCurrent(UiScreen& screen, fui::Rect rect, const int coverRowHeight, const int coverColumns) {
   const auto& theme = screen.theme();
   const auto& book = books->front();
   card.title = book.title.c_str();
@@ -216,7 +247,7 @@ void CoverGridHomeUi::drawCurrent(UiScreen& screen, fui::Rect rect, const int co
   // Fit the shared 2:3 cover box within both the row and a grid column. No
   // gap reserve: the cell insets already keep adjacent covers apart, and the
   // SpaceBetween layout absorbs whatever slack remains.
-  const int maxCoverWidth = rect.width / GRID_COLUMNS - 2 * COVER_CELL_INSET;
+  const int maxCoverWidth = rect.width / coverColumns - 2 * COVER_CELL_INSET;
   card.coverSize.height = std::max(1, std::min(std::min<int>(rect.height, coverRowHeight) - 12, maxCoverWidth * 3 / 2));
   card.coverSize.width = std::max(1, card.coverSize.height * 2 / 3);
   noteThumbHeight(card.coverSize.height);
@@ -254,6 +285,89 @@ fui::Rect CoverGridHomeUi::layoutGrid(fui::Rect rect) {
   return rect;
 }
 
+namespace {
+// Goal rows, in the order they are drawn. Daily first: it is the one that
+// changes between two glances at the home screen.
+constexpr goals::Id GOAL_ORDER[] = {goals::Id::DailyMinutes, goals::Id::WeeklyMinutes, goals::Id::StreakDays,
+                                    goals::Id::BooksPerYear};
+constexpr StrId GOAL_LABELS[] = {StrId::STR_GOAL_DAILY, StrId::STR_GOAL_WEEKLY, StrId::STR_GOAL_STREAK,
+                                 StrId::STR_GOAL_BOOKS_YEAR};
+static_assert(std::size(GOAL_ORDER) == std::size(GOAL_LABELS));
+static_assert(std::size(GOAL_ORDER) == goals::kCount);
+
+constexpr int16_t GOAL_BAR_HEIGHT = 6;
+constexpr int16_t GOAL_ROW_GAP = 8;
+constexpr int16_t LABEL_FIGURE_GAP = 8;
+constexpr int16_t GOAL_LABEL_BAR_GAP = 3;
+
+// "42/60", in whatever unit the goal counts. Raw figures rather than a
+// percentage: "3/12" says what is left, "25%" does not. Minutes stay bare
+// numbers so the pair reads as one quantity -- statsText::duration() would render
+// the left side "--" at zero against a right side of "1 h 00".
+void formatGoalValue(char* out, const size_t size, const goals::Progress& progress) {
+  std::snprintf(out, size, "%u/%u", static_cast<unsigned>(progress.current), static_cast<unsigned>(progress.target));
+}
+}  // namespace
+
+int CoverGridHomeUi::goalsStripHeight(UiScreen& screen) {
+  const auto& theme = screen.theme();
+  const int16_t lineHeight = screen.target().lineHeight(theme.smallText.font);
+  const goals::Targets targets = goalTargetsFromSettings();
+  int rows = 0;
+  for (const goals::Id id : GOAL_ORDER) {
+    if (goals::targetFor(id, targets) != 0) ++rows;
+  }
+  // Nothing set: one line of guidance instead of an empty band, so the theme
+  // explains itself rather than looking broken.
+  if (rows == 0) return lineHeight + GOAL_ROW_GAP;
+  return rows * (lineHeight + GOAL_LABEL_BAR_GAP + GOAL_BAR_HEIGHT + GOAL_ROW_GAP);
+}
+
+void CoverGridHomeUi::drawGoals(UiScreen& screen, const fui::Rect rect) {
+  const auto& theme = screen.theme();
+  auto& target = screen.target();
+  const goals::Targets targets = goalTargetsFromSettings();
+
+  if (!goals::anyEnabled(targets)) {
+    fui::TextStyle hint = theme.smallText;
+    hint.align = fui::TextAlign::Center;
+    target.text(rect, tr(STR_GOAL_NONE_SET), hint);
+    return;
+  }
+
+  const int16_t lineHeight = target.lineHeight(theme.smallText.font);
+  int16_t y = rect.y;
+  for (size_t i = 0; i < std::size(GOAL_ORDER); ++i) {
+    const goals::Id id = GOAL_ORDER[i];
+    const auto progress = goals::progressFor(id, targets, summary);
+    if (!progress.enabled) continue;
+
+    char value[48];
+    formatGoalValue(value, sizeof(value), progress);
+
+    // Label left, figure right, on one line; the bar spans the full width
+    // underneath so four goals still read as four rows and not as a table.
+    fui::TextStyle figure = theme.smallText;
+    figure.align = fui::TextAlign::Right;
+    target.text(fui::Rect{rect.x, y, rect.width, lineHeight}, value, figure);
+    // The label gets only what the figure leaves. Sharing the full width would
+    // let a long translation run underneath the number instead of truncating.
+    const auto figureWidth = target.measureText(figure.font, value, figure).width;
+    const auto labelWidth = static_cast<int16_t>(std::max(0, rect.width - figureWidth - LABEL_FIGURE_GAP));
+    fui::TextStyle label = theme.smallText;
+    label.align = fui::TextAlign::Left;
+    target.text(fui::Rect{rect.x, y, labelWidth, lineHeight}, I18N.get(GOAL_LABELS[i]), label);
+
+    const int16_t barY = static_cast<int16_t>(y + lineHeight + GOAL_LABEL_BAR_GAP);
+    target.stroke(fui::Rect{rect.x, barY, rect.width, GOAL_BAR_HEIGHT}, fui::Paint::solid(fui::Color::Black), 1);
+    const auto fill = static_cast<int16_t>(rect.width * progress.percent / 100);
+    if (fill > 0) {
+      target.fill(fui::Rect{rect.x, barY, fill, GOAL_BAR_HEIGHT}, fui::Paint::solid(fui::Color::Black));
+    }
+    y = static_cast<int16_t>(barY + GOAL_BAR_HEIGHT + GOAL_ROW_GAP);
+  }
+}
+
 void CoverGridHomeUi::drawGrid(UiScreen& screen) {
   const auto rect = gridBounds;
   grid.count = books->size() > 1 ? books->size() - 1 : 0;
@@ -283,11 +397,29 @@ void CoverGridHomeUi::drawGrid(UiScreen& screen) {
 }
 
 void CoverGridHomeUi::drawTabs(UiScreen& screen, fui::Rect rect) {
-  static constexpr const uint8_t* ICONS[] = {FolderIcon, LibraryIcon, BlocksIcon, TransferIcon, Settings2Icon};
+  // A tab's value is a menu index, so this order has to be the order of
+  // HomeActivity::indexToMenuItem(): file browser, library, statistics, the
+  // optional plugins/OPDS slot, file transfer, settings. The statistics entry
+  // used to be missing here, which shifted every icon from the slot onwards:
+  // the transfer icon opened Statistics, the settings icon opened File
+  // Transfer, and Settings itself was left with a navigable position that drew
+  // no tab at all. Add an entry to one list and it has to be added to both.
+  static constexpr int SLOT_POSITION = 3;
+  static constexpr const uint8_t* ICONS[] = {FolderIcon, LibraryIcon,  RecentIcon,
+                                             BlocksIcon, TransferIcon, Settings2Icon};
+  static constexpr int POSITIONS = static_cast<int>(sizeof(ICONS) / sizeof(ICONS[0]));
+  // TAB_POSITIONS is what HomeActivity checks its own menu against; keeping the
+  // icon count tied to it means an icon added here without a menu entry, or the
+  // reverse, fails to compile instead of drawing the wrong destination.
+  static_assert(POSITIONS == static_cast<int>(TAB_POSITIONS), "ICONS must cover exactly TAB_POSITIONS");
+  static_assert(POSITIONS <= static_cast<int>(std::tuple_size<decltype(tabItems)>::value),
+                "tabItems must hold every tab position");
   int count = 0;
-  for (int i = 0; i < 5; ++i) {
-    if (i == 2 && slotTab == SlotTab::NONE) continue;
+  for (int i = 0; i < POSITIONS; ++i) {
+    if (i == SLOT_POSITION && slotTab == SlotTab::NONE) continue;
     auto& tab = tabItems[count];
+    // `count`, not `i`: indexToMenuItem() closes the gap left by an absent
+    // slot too, so the drawn position and the menu index stay equal.
     tab.value = books->size() + count;
     tab.selected = selected == tab.value;
     tab.label = nullptr;
@@ -303,8 +435,11 @@ void CoverGridHomeUi::drawTabs(UiScreen& screen, fui::Rect rect) {
   tabs.iconPainter = [](fui::DrawTarget&, fui::Rect iconRect, const fui::TabItem& tab, uint8_t, void* user) {
     const auto& self = *static_cast<CoverGridHomeUi*>(user);
     const int index = tab.value - static_cast<int>(self.books->size());
-    const int icon = self.slotTab == SlotTab::NONE && index >= 2 ? index + 1 : index;
-    const uint8_t* bitmap = icon == 2 && self.slotTab == SlotTab::OPDS ? BookIcon : ICONS[icon];
+    // Back from the drawn position to the position in ICONS, which still has
+    // the slot in it when the reader has no plugins and no catalog.
+    const int position = self.slotTab == SlotTab::NONE && index >= SLOT_POSITION ? index + 1 : index;
+    if (position < 0 || position >= POSITIONS) return false;
+    const uint8_t* bitmap = position == SLOT_POSITION && self.slotTab == SlotTab::OPDS ? BookIcon : ICONS[position];
     self.renderer.drawIcon(bitmap, iconRect.x, iconRect.y, iconRect.width);
     return true;
   };

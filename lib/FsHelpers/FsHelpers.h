@@ -68,6 +68,17 @@ bool hasMarkdownExtension(std::string_view fileName);
 
 bool hasReflowableBookExtension(std::string_view fileName);
 
+// True for any format the library indexes. LibraryBuilder's own accept test
+// calls this, so the set lives in one place.
+bool hasBookExtension(std::string_view fileName);
+
+// Removes a book extension from a display name, in place, and reports whether
+// one went. Only hasBookExtension()'s set is removed, so a dot in
+// a real title survives where getFileNameWithoutExtension() would cut it --
+// "Vol. 2" stays whole. A name that is nothing but an extension is left
+// alone, so a caller drawing it still has something to draw.
+bool stripBookExtension(std::string& name);
+
 // Check for .css extension (case-insensitive)
 bool hasCssExtension(std::string_view fileName);
 std::string extractFolderPath(const std::string& filePath);

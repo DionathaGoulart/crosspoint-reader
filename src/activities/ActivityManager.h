@@ -20,6 +20,11 @@ class RenderLock;  // forward declaration
 
 enum class HomeMenuItem { NONE, FILE_BROWSER, LIBRARY, STATS, PLUGINS, OPDS_BROWSER, FILE_TRANSFER, SETTINGS_MENU };
 
+// Home menu entries that are always present: file browser, library,
+// statistics, file transfer, settings. PLUGINS and OPDS_BROWSER share one
+// optional slot on top of these, so the menu is this or this plus one.
+constexpr int kHomeBaseMenuItems = 5;
+
 /**
  * ActivityManager
  *

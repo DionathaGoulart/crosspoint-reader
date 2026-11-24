@@ -1,7 +1,6 @@
 #include "StatsView.h"
 
 #include <algorithm>
-#include <cstdio>
 
 namespace stats {
 
@@ -49,24 +48,24 @@ Summary summarize(const StatsAggregate& aggregate, const uint32_t booksFinished,
   return s;
 }
 
-void formatDuration(char* out, const size_t size, const uint32_t minutes) {
-  if (out == nullptr || size == 0) return;
-  if (minutes == 0) {
-    std::snprintf(out, size, "--");
-    return;
-  }
+DurationParts splitDuration(const uint32_t minutes) {
+  DurationParts parts;
+  if (minutes == 0) return parts;
   if (minutes < 60) {
-    std::snprintf(out, size, "%u min", static_cast<unsigned>(minutes));
-    return;
+    parts.unit = DurationParts::Minutes;
+    parts.minutes = minutes;
+    return parts;
   }
+  parts.hours = minutes / 60;
   // Past a hundred hours the minutes stop being interesting and the tile runs
   // out of room, so they are dropped rather than shrunk.
-  const uint32_t hours = minutes / 60;
-  if (hours >= 100) {
-    std::snprintf(out, size, "%u h", static_cast<unsigned>(hours));
-    return;
+  if (parts.hours >= 100) {
+    parts.unit = DurationParts::Hours;
+    return parts;
   }
-  std::snprintf(out, size, "%u h %02u", static_cast<unsigned>(hours), static_cast<unsigned>(minutes % 60));
+  parts.unit = DurationParts::HoursAndMinutes;
+  parts.minutes = minutes % 60;
+  return parts;
 }
 
 size_t monthMap(const StatsAggregate& aggregate, const int32_t today, const int days, uint16_t* out,

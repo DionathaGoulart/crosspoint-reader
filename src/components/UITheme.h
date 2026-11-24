@@ -43,6 +43,9 @@ class UITheme {
                                       TextVerticalAlignment verticalAlignment = TextVerticalAlignment::CENTER);
   static bool supportsCoverGrid();
   static bool hasCoverGridHome();
+  // True for the cover home variant that shows reading goals instead of a
+  // grid of other books.
+  static bool hasGoalsHome();
   static void drawCoverGridHome(CoverGridHomeUi& home);
   void reload();
   void setTheme(CrossPointSettings::UI_THEME type);

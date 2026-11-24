@@ -48,7 +48,6 @@
 #include "ReaderLineSpacing.h"
 #include "ReaderToolbarUi.h"
 #include "ReaderUtils.h"
-#include "stats/FinishedBooksStore.h"
 #include "RecentBooksStore.h"
 #include "SdCardFont.h"
 #include "SdCardFontSystem.h"
@@ -824,20 +823,10 @@ void EpubReaderActivity::loop() {
     }
   }
 
-  if (atEndOfBook) {
-    pendingReadFolderMove = SETTINGS.moveFinishedToReadFolder && !isInReadFolder(epub->getPath());
-    // Same moment the move decision is made, and recorded whether or not the
-    // move is enabled: the shelf of finished books must not depend on a
-    // setting. markFinished() keeps the first date, so re-reaching the end
-    // costs one no-op save.
-    if (!finishedRecorded) {
-      finishedbooks::recordFinished(epub->getPath(), epub->getTitle(), epub->getAuthor(), epub->getLanguage());
-      finishedRecorded = true;
-    }
-  } else {
-    pendingReadFolderMove = false;
-    finishedRecorded = false;
-  }
+  pendingReadFolderMove = atEndOfBook && SETTINGS.moveFinishedToReadFolder && !isInReadFolder(epub->getPath());
+  // Shared with every other reader: this loop overrides ReaderActivity::loop(),
+  // so the base call never runs here and the record has to be asked for.
+  recordFinishedIfAtEnd(atEndOfBook);
 
   const auto touch =
       ReaderUtils::detectTouchPageTurn(renderer, mappedInput, ReaderUtils::isRtlBookLanguage(epub->getLanguage()));

@@ -21,6 +21,7 @@
 #include "ClockSettingsActivity.h"
 #include "CrossPointSettings.h"
 #include "FontDownloadActivity.h"
+#include "GoalsSettingsActivity.h"
 #include "HomeButtonSettingsActivity.h"
 #include "KOReaderSettingsActivity.h"
 #include "KeyboardLayoutsActivity.h"
@@ -52,6 +53,9 @@ SettingsSection sectionFor(const SettingInfo& setting);
 bool showOnDevice(const SettingInfo& setting) {
   if (sectionFor(setting) == SettingsSection::End || home_button::isSetting(setting.valuePtr)) return false;
   if (setting.valuePtr == &CrossPointSettings::fadingFix && !CrossPointSettings::fadingFixSupported()) return false;
+  // The cover shelf keeps its art in PSRAM; without any, the row would toggle
+  // a setting that can never take effect.
+  if (setting.valuePtr == &CrossPointSettings::libraryCoverView && !UITheme::supportsCoverGrid()) return false;
   // Merged into the Text Settings screen.
   if (setting.category == StrId::STR_CAT_READER && setting.inTextSettings) return false;
   if (setting.valuePtr == &CrossPointSettings::pwrBtnFootnoteBack &&
@@ -67,6 +71,7 @@ bool showOnDevice(const SettingInfo& setting) {
 SettingsSection sectionFor(const SettingInfo& setting) {
   if (setting.valuePtr == &CrossPointSettings::libraryUseMetadata ||
       setting.valuePtr == &CrossPointSettings::libraryRecentOpenedOnly ||
+      setting.valuePtr == &CrossPointSettings::libraryCoverView ||
       setting.valuePtr == &CrossPointSettings::removeReadBooksFromRecents ||
       setting.valuePtr == &CrossPointSettings::moveFinishedToReadFolder) {
     return SettingsSection::Library;
@@ -189,6 +194,7 @@ void SettingsActivity::rebuildSettings() {
   if (halClock.isAvailable()) {
     addAction(SettingsSection::General, StrId::STR_CLOCK, SettingAction::ClockSettings);
   }
+  addAction(SettingsSection::General, StrId::STR_GOALS, SettingAction::GoalsSettings);
   addAction(SettingsSection::Reader, StrId::STR_CUSTOMISE_STATUS_BAR, SettingAction::CustomiseStatusBar);
   addAction(SettingsSection::Reader, StrId::STR_CLEAR_READING_CACHE, SettingAction::ClearCache);
 
@@ -410,6 +416,13 @@ void SettingsActivity::toggleSelectedSetting() {
           startActivityForResult(std::move(activity), resultHandler);
         } else {
           LOG_ERR("SETTINGS", "OOM: ClockSettingsActivity");
+        }
+        break;
+      case SettingAction::GoalsSettings:
+        if (auto activity = makeUniqueNoThrow<GoalsSettingsActivity>(renderer, mappedInput)) {
+          startActivityForResult(std::move(activity), resultHandler);
+        } else {
+          LOG_ERR("SETTINGS", "OOM: GoalsSettingsActivity");
         }
         break;
       case SettingAction::KOReaderSync:
