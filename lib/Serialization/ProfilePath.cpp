@@ -2,6 +2,7 @@
 
 #include <HalStorage.h>
 
+#include <atomic>
 #include <cstdio>
 #include <cstring>
 
@@ -10,21 +11,32 @@ namespace {
 constexpr char ROOT[] = "/.crosspoint";
 constexpr char PROFILES_DIR[] = "/.crosspoint/profiles";
 
-// Plain uint8_t rather than an atomic: it is written from the settings screen
-// and read on the paths that save and load, all on the main task. The render
-// task never resolves a path.
-uint8_t active = DEFAULT_ID;
+// Atomic because this is read from more than one task, which an earlier comment
+// here denied. Two readers are known: the web server task saves settings
+// (CrossPointWebServer -> CrossPointSettings::saveToFile), and the render task
+// resolves the progress file name on every page save
+// (EpubReaderActivity::renderBook -> ProgressFile::pathIn -> activeId).
+// A byte load is indivisible on both targets, so nothing tears either way; what
+// the atomic buys is that a switch cannot be read half-published, and that the
+// next per-profile path added on a render path does not inherit a false
+// promise. Relaxed: there is no other state being published with it.
+std::atomic<uint8_t> active{DEFAULT_ID};
 }  // namespace
 
-void setActiveId(const uint8_t id) { active = id; }
+void setActiveId(const uint8_t id) { active.store(id, std::memory_order_relaxed); }
 
-uint8_t activeId() { return active; }
+uint8_t activeId() { return active.load(std::memory_order_relaxed); }
+
+std::string dirFor(const uint8_t id) {
+  if (id == DEFAULT_ID) return std::string(ROOT) + "/";
+  char buffer[16];
+  std::snprintf(buffer, sizeof(buffer), "/%u/", static_cast<unsigned>(id));
+  return std::string(PROFILES_DIR) + buffer;
+}
 
 std::string activeDir(const bool perProfile) {
-  if (!perProfile || active == DEFAULT_ID) return std::string(ROOT) + "/";
-  char buffer[16];
-  std::snprintf(buffer, sizeof(buffer), "/%u/", static_cast<unsigned>(active));
-  return std::string(PROFILES_DIR) + buffer;
+  if (!perProfile) return std::string(ROOT) + "/";
+  return dirFor(activeId());
 }
 
 std::string resolve(const char* fileName, const bool perProfile) {
@@ -40,8 +52,11 @@ std::string resolve(const char* fileName, const bool perProfile) {
 }
 
 bool ensureActiveDir(const bool perProfile) {
+  // Before any mkdir: a device-wide store, and every store under the default
+  // profile, must cost exactly what it cost before profiles existed.
+  // writeDocToFile() already ensures the root for those.
+  if (!perProfile || activeId() == DEFAULT_ID) return true;
   Storage.mkdir(ROOT);
-  if (!perProfile || active == DEFAULT_ID) return true;
   std::string dir = activeDir(perProfile);
   // Drop the trailing slash: mkdir wants the directory, not a path inside it.
   if (!dir.empty() && dir.back() == '/') dir.pop_back();

@@ -75,6 +75,9 @@ constexpr const char* PROFILE_SETTING_KEYS[] = {
     "fontSize",
     "sdFontFamilyName",
     "lineHeight",
+    // The pre-rename spelling fromJson() still migrates from. Without it a new
+    // profile would inherit the previous reader's spacing from the device file.
+    "lineSpacing",
     "wordSpacing",
     "characterSpacing",
     "screenMargin",
@@ -96,6 +99,11 @@ constexpr const char* PROFILE_SETTING_KEYS[] = {
 // The profile's own settings file. Bare name: profilePath::resolve() puts it
 // under the active profile's directory.
 constexpr char PROFILE_SETTINGS_FILE[] = "settings.json";
+
+// lineHeight and lineSpacing are one field under two spellings, so the key
+// count is one more than the number of assignments in resetProfileSettings().
+static_assert(sizeof(PROFILE_SETTING_KEYS) / sizeof(PROFILE_SETTING_KEYS[0]) == 20,
+              "add the matching line to resetProfileSettings() when this list changes");
 
 bool CrossPointSettings::isProfileSetting(const char* key) {
   if (key == nullptr) return false;
@@ -128,6 +136,10 @@ void CrossPointSettings::fillProfileJson(JsonDocument& doc) const { fillJson(doc
 void CrossPointSettings::fillJson(JsonDocument& doc, const bool deviceDocument) const {
   const CrossPointSettings& s = *this;
   const auto belongs = [deviceDocument](const char* key) { return keyBelongsIn(key, deviceDocument); };
+  // EVERY key below goes through belongs(), including the device-only ones:
+  // the profile document must contain nothing but this reader's settings, and
+  // a manual line added without the guard silently writes a device setting
+  // into every profile's file.
 
   auto visit = [&](const SettingInfo& info) {
     if (!info.key) return;
@@ -152,10 +164,12 @@ void CrossPointSettings::fillJson(JsonDocument& doc, const bool deviceDocument) 
   forEachBaseSetting(visit);
 
   // Front button remap — managed by RemapFrontButtons sub-activity, not in SettingsList.
-  doc["frontButtonBack"] = frontButtonBack;
-  doc["frontButtonConfirm"] = frontButtonConfirm;
-  doc["frontButtonLeft"] = frontButtonLeft;
-  doc["frontButtonRight"] = frontButtonRight;
+  if (belongs("frontButtonBack")) {
+    doc["frontButtonBack"] = frontButtonBack;
+    doc["frontButtonConfirm"] = frontButtonConfirm;
+    doc["frontButtonLeft"] = frontButtonLeft;
+    doc["frontButtonRight"] = frontButtonRight;
+  }
   // Font family and size — both use dynamic getter/setters in SettingsList (the
   // option lists depend on the SD font registry), so the generic loop skips them.
   if (belongs("fontFamily")) doc["fontFamily"] = STORED_NOTOSANS;
@@ -164,26 +178,28 @@ void CrossPointSettings::fillJson(JsonDocument& doc, const bool deviceDocument) 
   if (sdFontFamilyName[0] != '\0' && belongs("sdFontFamilyName")) {
     doc["sdFontFamilyName"] = sdFontFamilyName;
   }
-  if (uiFontFamilyName[0] != '\0') {
+  if (uiFontFamilyName[0] != '\0' && belongs("uiFontFamilyName")) {
     doc["uiFontFamilyName"] = uiFontFamilyName;
   }
   // Dictionary folder name — uses dynamic getter/setter in SettingsList, save manually
-  if (dictionaryName[0] != '\0') {
+  if (dictionaryName[0] != '\0' && belongs("dictionaryName")) {
     doc["dictionaryName"] = dictionaryName;
   }
   // The displayed option list varies by board, so this setting uses a dynamic
   // display-index mapping and is skipped by the generic persistence loop.
-  doc["longPressMenuFunction"] = longPressMenuFunction;
-  doc["shortPwrBtn"] = shortPwrBtn;
-  doc["doublePwrBtn"] = doublePwrBtn;
+  if (belongs("longPressMenuFunction")) {
+    doc["longPressMenuFunction"] = longPressMenuFunction;
+    doc["shortPwrBtn"] = shortPwrBtn;
+    doc["doublePwrBtn"] = doublePwrBtn;
+  }
 
   // Language -- managed by LanguageSelectActivity, not in SettingsList.
   // Stored as ISO code string ("EN", "DE", ...) for stability across enum reorders.
-  doc["language"] = (language < getLanguageCount()) ? LANGUAGE_CODES[language] : "EN";
+  if (belongs("language")) doc["language"] = (language < getLanguageCount()) ? LANGUAGE_CODES[language] : "EN";
 
   // A uint16_t mask, so it does not fit the uint8_t generic loop. Omitted while
   // unconfigured, so the default keeps following the UI language.
-  if (keyboardLayouts != 0) {
+  if (keyboardLayouts != 0 && belongs("keyboardLayouts")) {
     doc["keyboardLayouts"] = keyboardLayouts;
   }
 
@@ -197,7 +213,8 @@ void CrossPointSettings::fillJson(JsonDocument& doc, const bool deviceDocument) 
     if (goalBooksPerYear != 0) doc["goalBooksPerYear"] = goalBooksPerYear;
   }
 
-  bleturner::writeJson(ble, doc);
+  // Device-only, like everything else not on the profile list.
+  if (deviceDocument) bleturner::writeJson(ble, doc);
 }
 
 bool CrossPointSettings::fromJson(JsonVariantConst doc) {
@@ -518,17 +535,41 @@ int CrossPointSettings::getReaderFontId() const {
 // ---- Profiles ---------------------------------------------------------------
 
 bool CrossPointSettings::saveToFile() const {
-  // The device document first, which for the default profile is the whole of
-  // settings.json exactly as before profiles existed.
-  const bool deviceOk = PersistableStore<CrossPointSettings>::saveToFile();
-  if (profilePath::activeId() == profilePath::DEFAULT_ID) return deviceOk;
+  // The default profile's settings are the whole of settings.json, exactly as
+  // before profiles existed, so its save is the base's and nothing else.
+  if (profilePath::activeId() == profilePath::DEFAULT_ID) {
+    return PersistableStore<CrossPointSettings>::saveToFile();
+  }
 
+  // One hold of storeMutex across BOTH files. Taking it twice would let a save
+  // from the web server task land between them and leave the two documents
+  // holding different snapshots, which is the tearing this mutex is documented
+  // to prevent.
   std::lock_guard<std::mutex> lock(storeMutex);
-  JsonDocument doc;
-  fillProfileJson(doc);
-  const std::string path = profilePath::resolve(PROFILE_SETTINGS_FILE, /*perProfile=*/true);
+
+  JsonDocument device;
+  fillJson(device, /*deviceDocument=*/true);
+
+  // Carry the OTHER reader's preferences forward. writeDocToFile replaces the
+  // file wholesale, and for a non-default profile fillJson leaves the personal
+  // keys out -- so without this, a guest toggling the frontlight would erase
+  // the default profile's font, margins, theme and reading goals from the only
+  // place they exist. They are copied back untouched; this profile's own values
+  // go to its overlay below.
+  JsonDocument onDisk;
+  if (readDocFromFile(getFilePath(), onDisk)) {
+    for (JsonPairConst pair : onDisk.as<JsonObjectConst>()) {
+      if (!isProfileSetting(pair.key().c_str())) continue;
+      device[pair.key()] = pair.value();
+    }
+  }
+  const bool deviceOk = writeDocToFile(getFilePath(), device);
+
+  JsonDocument overlay;
+  fillProfileJson(overlay);
   profilePath::ensureActiveDir(/*perProfile=*/true);
-  return writeDocToFile(path.c_str(), doc) && deviceOk;
+  const std::string path = profilePath::resolve(PROFILE_SETTINGS_FILE, /*perProfile=*/true);
+  return writeDocToFile(path.c_str(), overlay) && deviceOk;
 }
 
 void CrossPointSettings::resetProfileSettings() {
@@ -539,64 +580,79 @@ void CrossPointSettings::resetProfileSettings() {
   // someone reading at 20pt to someone who never set a size and the text stays
   // at 20pt.
   //
-  // Declared defaults rather than a second copy of each value: a const instance
-  // is the same initializers the struct already carries, so the two cannot
-  // drift. It is static because it is read-only and would otherwise be a large
-  // local on a path the render task can reach.
-  static const CrossPointSettings DEFAULTS;
-
-  auto visit = [this](const SettingInfo& info) {
-    if (!info.key || !info.valuePtr) return;
-    if (!isProfileSetting(info.key)) return;
-    this->*(info.valuePtr) = DEFAULTS.*(info.valuePtr);
-  };
-  forEachBaseSetting(visit);
-
-  // The profile keys the generic loop does not reach, because they are dynamic
-  // or wider than uint8_t. Kept beside PROFILE_SETTING_KEYS on purpose: a key
-  // added to that list and forgotten here is a setting that leaks between
-  // readers, which is the failure this whole function exists to stop.
-  fontPointSize = DEFAULTS.fontPointSize;
+  // Written out rather than looped: every value here is the SAME named constant
+  // the member initializer uses, so the two cannot drift. A const instance of
+  // this class would have been one line, but it inherits a std::mutex, which
+  // makes the constructor non-constexpr -- so it would sit in .bss and allocate
+  // a FreeRTOS mutex on every boot of every device, including the ones that
+  // never create a profile.
+  //
+  // One assignment per entry in PROFILE_SETTING_KEYS. A key added there without
+  // a line here is a preference that leaks between readers, which is the whole
+  // failure this function exists to stop.
+  fontFamily = NOTOSANS;
+  fontPointSize = DEFAULT_FONT_POINT_SIZE;
   sdFontFamilyName[0] = '\0';
-  goalDailyMinutes = DEFAULTS.goalDailyMinutes;
-  goalWeeklyMinutes = DEFAULTS.goalWeeklyMinutes;
-  goalStreakDays = DEFAULTS.goalStreakDays;
-  goalBooksPerYear = DEFAULTS.goalBooksPerYear;
+  lineSpacing = LINE_SPACING_120;
+  wordSpacing = DEFAULT_WORD_SPACING;
+  characterSpacing = CHARACTER_SPACING_OFFSET;
+  screenMargin = SCREEN_MARGIN_MIN;
+  paragraphAlignment = JUSTIFIED;
+  extraParagraphSpacing = DEFAULT_EXTRA_PARAGRAPH_SPACING;
+  paragraphIndentSpaces = DEFAULT_PARAGRAPH_INDENT_SPACES;
+  hyphenationEnabled = DEFAULT_HYPHENATION_ENABLED;
+  embeddedStyle = DEFAULT_EMBEDDED_STYLE;
+  focusReadingEnabled = DEFAULT_FOCUS_READING_ENABLED;
+  textAntiAliasing = DEFAULT_TEXT_ANTI_ALIASING;
+  uiTheme = LYRA;
+  goalDailyMinutes = 0;
+  goalWeeklyMinutes = 0;
+  goalStreakDays = 0;
+  goalBooksPerYear = 0;
 }
 
 bool CrossPointSettings::loadFromFile() {
-  std::lock_guard<std::mutex> lock(storeMutex);
-  resetProfileSettings();
-  JsonDocument doc;
-  // A missing device file is first boot, and the struct initializers stand.
-  const bool haveDevice = readDocFromFile(getFilePath(), doc);
+  bool ok = false;
+  bool doResave = false;
+  {
+    std::lock_guard<std::mutex> lock(storeMutex);
+    resetProfileSettings();
+    JsonDocument doc;
+    // A missing device file is first boot, and the struct initializers stand.
+    const bool haveDevice = readDocFromFile(getFilePath(), doc);
 
-  if (profilePath::activeId() != profilePath::DEFAULT_ID) {
-    JsonDocument overlay;
-    const std::string path = profilePath::resolve(PROFILE_SETTINGS_FILE, /*perProfile=*/true);
-    if (readDocFromFile(path.c_str(), overlay)) {
-      // Merged into the device document rather than applied afterwards, so the
-      // single fromJson() below keeps doing the legacy migrations, the font
-      // selection and the clamping it already does, and a key in neither file
-      // still lands on fromJson()'s own default. Applying an overlay after the
-      // fact would instead leave it at whatever is in memory, which on a switch
-      // between profiles is the other reader's choice.
-      for (JsonPairConst pair : overlay.as<JsonObjectConst>()) {
-        if (!isProfileSetting(pair.key().c_str())) continue;
-        doc[pair.key()] = pair.value();
+    if (profilePath::activeId() != profilePath::DEFAULT_ID) {
+      JsonDocument overlay;
+      const std::string path = profilePath::resolve(PROFILE_SETTINGS_FILE, /*perProfile=*/true);
+      if (readDocFromFile(path.c_str(), overlay)) {
+        // Merged into the device document rather than applied afterwards, so
+        // the single fromJson() below keeps doing the legacy migrations, the
+        // font selection and the clamping it already does. Applying an overlay
+        // after the fact would leave an absent key at whatever is in memory,
+        // which on a switch between profiles is the other reader's choice.
+        for (JsonPairConst pair : overlay.as<JsonObjectConst>()) {
+          if (!isProfileSetting(pair.key().c_str())) continue;
+          doc[pair.key()] = pair.value();
+        }
+      } else {
+        // No overlay yet: this profile has never saved. The device document
+        // still carries the default profile's personal keys, and inheriting
+        // them would start a new reader inside someone else's preferences.
+        for (const char* key : PROFILE_SETTING_KEYS) doc.remove(key);
       }
     }
-  }
-  if (!haveDevice && doc.as<JsonObjectConst>().size() == 0) return false;
+    if (!haveDevice && doc.as<JsonObjectConst>().size() == 0) return false;
 
-  resaveRequested = false;
-  const bool ok = fromJson(doc.as<JsonVariantConst>());
-  const bool doResave = resaveRequested;
-  resaveRequested = false;
-  if (ok && doResave) {
-    // Outside this lock would be correct but saveToFile() takes storeMutex, so
-    // the resave is left to the caller's next save rather than deadlocking.
-    LOG_INF("CPS", "Settings need a resave after a format update");
+    resaveRequested = false;
+    ok = fromJson(doc.as<JsonVariantConst>());
+    doResave = resaveRequested;
+    resaveRequested = false;
+  }
+  // Outside the lock, like the base does: saveToFile() takes storeMutex itself.
+  // Without this the legacy migrations of settings.json -- the store with the
+  // most of them -- would be redone on every boot and never persisted.
+  if (ok && doResave && !saveToFile()) {
+    LOG_ERR("CPS", "Failed to resave settings after a format update");
   }
   return ok;
 }

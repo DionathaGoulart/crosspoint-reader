@@ -37,6 +37,9 @@ class ProfilesSettingsActivity final : public UiListActivity {
   // render lock.
   void rebuildRows();
 
+  // Switching reloads the stores and replaces the theme object, so it runs
+  // under the render lock; see the definition.
+  void switchToProfile(uint8_t id);
   void showProfileOptions(int row);
   void promptNewProfile();
   void promptRename(uint8_t id);

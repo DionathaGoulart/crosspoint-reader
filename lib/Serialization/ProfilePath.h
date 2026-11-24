@@ -41,6 +41,12 @@ std::string resolve(const char* fileName, bool perProfile);
 // the default profile. For callers that build their own file names under it.
 std::string activeDir(bool perProfile);
 
+// The directory of a given profile, with a trailing '/'. For the rare caller
+// that needs a path for a profile other than the active one; it exists so no
+// such caller has to move the active id and put it back, which another task
+// can observe in between.
+std::string dirFor(uint8_t id);
+
 // Creates the active profile's directory if it is missing, one level at a time
 // because mkdir is not recursive. Call before the first write of a run; a read
 // does not need it. True when the directory exists afterwards.

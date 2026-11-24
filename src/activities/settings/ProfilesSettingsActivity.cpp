@@ -109,8 +109,12 @@ void ProfilesSettingsActivity::showProfileOptions(const int row) {
   std::vector<const char*> options;
   enum Choice : uint8_t { Use, Rename, Delete };
   std::vector<Choice> choices;
+  options.reserve(3);
+  choices.reserve(3);
   if (!isActive) {
-    options.push_back(tr(STR_PROFILE_IN_USE));
+    // An imperative, not the "In use" badge: this entry only exists for
+    // profiles that are not in use, so the badge named the wrong one.
+    options.push_back(tr(STR_PROFILE_USE));
     choices.push_back(Use);
   }
   options.push_back(tr(STR_RENAME));
@@ -125,12 +129,7 @@ void ProfilesSettingsActivity::showProfileOptions(const int row) {
                      if (chosen < 0 || chosen >= static_cast<int>(choices.size())) return;
                      switch (choices[static_cast<size_t>(chosen)]) {
                        case Use:
-                         // Reloads every store that follows the reader, so the
-                         // rows and the whole UI are rebuilt afterwards.
-                         if (profiles::switchTo(id)) {
-                           rebuildRows();
-                           requestUpdate();
-                         }
+                         switchToProfile(id);
                          break;
                        case Rename:
                          promptRename(id);
@@ -186,9 +185,12 @@ void ProfilesSettingsActivity::promptDelete(const uint8_t id) {
   if (profile == nullptr) return;
   // The body says what goes, because statistics and bookmarks are not
   // recoverable and the profile's name alone does not say that.
-  auto confirmation = makeUniqueNoThrow<ConfirmationActivity>(renderer, mappedInput, profile->name,
-                                                              tr(STR_PROFILE_DELETE_BODY), tr(STR_CANCEL),
-                                                              tr(STR_DELETE));
+  // Question as the heading, subject and consequence in the body, like every
+  // other ConfirmationActivity caller. The reader's name alone as a caption,
+  // with a sentence in the third person under it, asked nothing.
+  const std::string body = profile->name + "\n" + tr(STR_PROFILE_DELETE_BODY);
+  auto confirmation = makeUniqueNoThrow<ConfirmationActivity>(renderer, mappedInput, tr(STR_DELETE_ITEM_CONFIRM), body,
+                                                              tr(STR_CANCEL), tr(STR_DELETE));
   if (!confirmation) {
     LOG_ERR("PROFILE", "OOM: delete confirmation");
     return;
@@ -197,8 +199,29 @@ void ProfilesSettingsActivity::promptDelete(const uint8_t id) {
     if (result.isCancelled) return;
     // remove() leaves the active profile first when it is the one going, so
     // nothing in flight writes into a directory being removed.
+    // Leave it first if it is the one in use. remove() refuses the active
+    // profile on purpose: only switchTo() reloads the stores, and deleting
+    // without that would leave this reader's recents, awards and settings in
+    // memory, to be written over the default profile's files on the next save.
+    // Taking the render lock here is safe: ActivityManager releases its own
+    // before invoking a result handler, exactly so handlers can take one.
+    if (id == PROFILES.activeId()) switchToProfile(profilePath::DEFAULT_ID);
     if (!PROFILES.remove(id)) LOG_ERR("PROFILE", "Could not delete profile");
     rebuildRows();
     requestUpdate();
   });
+}
+
+void ProfilesSettingsActivity::switchToProfile(const uint8_t id) {
+  // The render lock is the point. switchTo() ends in UITheme::reload(), which
+  // destroys the theme object the render task may be calling virtual methods
+  // on, and on the way there it reloads four stores from the card while the
+  // render task reads fonts and covers from it. This callback runs from
+  // loop(), which ActivityManager does NOT hold the lock across.
+  {
+    RenderLock lock(*this);
+    if (!profiles::switchTo(id)) return;
+  }
+  rebuildRows();
+  requestUpdate();
 }

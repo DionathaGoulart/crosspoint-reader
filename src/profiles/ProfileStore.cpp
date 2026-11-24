@@ -73,10 +73,7 @@ uint8_t ProfileStore::allocateId() const {
 
 bool ProfileStore::wipeProfileData(const uint8_t id) {
   if (id == profilePath::DEFAULT_ID) return false;  // that is the whole card
-  const uint8_t previous = profilePath::activeId();
-  profilePath::setActiveId(id);
-  std::string dir = profilePath::activeDir(/*perProfile=*/true);
-  profilePath::setActiveId(previous);
+  std::string dir = profilePath::dirFor(id);
   if (!dir.empty() && dir.back() == '/') dir.pop_back();
   if (!Storage.exists(dir.c_str())) return true;
   if (Storage.removeDir(dir.c_str())) return true;
@@ -95,7 +92,9 @@ bool ProfileStore::create(const std::string& name, uint8_t* newId) {
   if (id == profilePath::DEFAULT_ID) return false;
   // An id is only reused after a delete, and a delete whose directory removal
   // failed would otherwise hand the old reader's statistics to the new one.
-  wipeProfileData(id);
+  // Refusing is the safe end: a profile that cannot be created is a message,
+  // one created over someone else's files is a leak.
+  if (!wipeProfileData(id)) return false;
 
   profiles.push_back(Profile{id, name});
   if (!saveToFile()) {
@@ -110,8 +109,7 @@ bool ProfileStore::rename(const uint8_t id, const std::string& name) {
   if (name.empty() || name.size() > MAX_NAME_LENGTH) return false;
   const auto it = std::find_if(profiles.begin(), profiles.end(), [id](const Profile& p) { return p.id == id; });
   if (it == profiles.end()) return false;
-  if (std::any_of(profiles.begin(), profiles.end(),
-                  [&](const Profile& p) { return p.id != id && p.name == name; })) {
+  if (std::any_of(profiles.begin(), profiles.end(), [&](const Profile& p) { return p.id != id && p.name == name; })) {
     return false;
   }
   std::string previous = std::move(it->name);
@@ -126,9 +124,15 @@ bool ProfileStore::remove(const uint8_t id) {
   const auto it = std::find_if(profiles.begin(), profiles.end(), [id](const Profile& p) { return p.id == id; });
   if (it == profiles.end()) return false;
 
-  // Leave the active profile before its files go, so nothing in flight writes
-  // into a directory that is being removed.
-  if (active == id && !setActive(profilePath::DEFAULT_ID)) return false;
+  // Refused rather than handled here: leaving the active profile means
+  // reloading every store that follows the reader, which is profiles::switchTo
+  // and lives a layer up. Doing it with setActive() alone moved only the path,
+  // leaving the deleted reader's recents, awards and settings in memory to be
+  // written over the default profile's files on the next save.
+  if (active == id) {
+    LOG_ERR("PROFILE", "Refusing to delete the active profile %u", static_cast<unsigned>(id));
+    return false;
+  }
 
   const Profile removed = *it;
   profiles.erase(it);

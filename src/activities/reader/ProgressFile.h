@@ -25,8 +25,9 @@ inline std::string name() {
 // Absolute path of that file inside a book's cache directory.
 inline std::string pathIn(const std::string& cachePath) { return cachePath + "/" + name(); }
 
-// Writes `len` bytes of reader progress to `<cachePath>/progress.bin` without
-// ever leaving the canonical file half-written.
+// Writes `len` bytes of reader progress to this reader's progress file --
+// name() decides which, so the names below are the default profile's --
+// without ever leaving the canonical file half-written.
 //
 // The bytes go to a temporary `progress.bin.tmp` first; only once that is fully
 // written and closed is it renamed over progress.bin. An interrupted write

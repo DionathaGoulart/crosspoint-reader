@@ -305,16 +305,16 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
   // Resetting to 0 (e.g. via the web UI) forces a re-sync on next WiFi connect.
   uint8_t clockHasBeenSynced = 0;
   // Text rendering settings
-  uint8_t extraParagraphSpacing = 1;
-  uint8_t paragraphIndentSpaces = 2;
+  uint8_t extraParagraphSpacing = DEFAULT_EXTRA_PARAGRAPH_SPACING;
+  uint8_t paragraphIndentSpaces = DEFAULT_PARAGRAPH_INDENT_SPACES;
   static constexpr uint8_t WORD_SPACING_MIN = 50;
   static constexpr uint8_t WORD_SPACING_MAX = 200;
   static constexpr uint8_t WORD_SPACING_STEP = 25;
-  uint8_t wordSpacing = 100;                              // percent of the font's space advance
+  uint8_t wordSpacing = DEFAULT_WORD_SPACING;             // percent of the font's space advance
   static constexpr uint8_t CHARACTER_SPACING_OFFSET = 2;  // stored 0..4 maps to -2..+2 px
   uint8_t characterSpacing = CHARACTER_SPACING_OFFSET;
   int8_t getCharacterSpacing() const { return static_cast<int8_t>(characterSpacing - CHARACTER_SPACING_OFFSET); }
-  uint8_t textAntiAliasing = 1;
+  uint8_t textAntiAliasing = DEFAULT_TEXT_ANTI_ALIASING;
   // Short power button click behaviour
   uint8_t shortPwrBtn = IGNORE;
   // Power double click (see hasPowerDoubleClick()); Ignore disables the
@@ -349,7 +349,7 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
   uint8_t sleepTimeoutMinutes = 10;
   // E-ink refresh frequency (default 15 pages)
   uint8_t refreshFrequency = REFRESH_15;
-  uint8_t hyphenationEnabled = 0;
+  uint8_t hyphenationEnabled = DEFAULT_HYPHENATION_ENABLED;
 
   // Reader screen margin settings
   static constexpr uint8_t SCREEN_MARGIN_MIN = 5;
@@ -384,9 +384,9 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
   // Power button return from footnotes (1 = enabled, 0 = disabled)
   uint8_t pwrBtnFootnoteBack = 1;
   // Use book's embedded CSS styles for EPUB rendering (1 = enabled, 0 = disabled)
-  uint8_t embeddedStyle = 1;
+  uint8_t embeddedStyle = DEFAULT_EMBEDDED_STYLE;
   // Focus Reading - emphasizes the first part of words with bold
-  uint8_t focusReadingEnabled = 0;
+  uint8_t focusReadingEnabled = DEFAULT_FOCUS_READING_ENABLED;
   uint8_t readerMenuStyle = READER_MENU_LIST;
   // SD card font family name (empty = use built-in fontFamily)
   char sdFontFamilyName[32] = "";
@@ -483,6 +483,21 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
   uint16_t goalWeeklyMinutes = 0;
   uint16_t goalStreakDays = 0;
   uint16_t goalBooksPerYear = 0;
+
+  // Declared defaults for the settings that follow the reader, named so that
+  // resetProfileSettings() can reference the SAME constant the member
+  // initializer above does. Naming rather than copying is what makes the two
+  // unable to drift -- and it is why there is no second CrossPointSettings
+  // instance here: that would have cost 728 bytes of .bss plus a FreeRTOS mutex
+  // allocated on every boot, because the inherited std::mutex makes the
+  // constructor non-constexpr. The rest of the 19 already had names.
+  static constexpr uint8_t DEFAULT_WORD_SPACING = 100;  // percent of the space advance
+  static constexpr uint8_t DEFAULT_EXTRA_PARAGRAPH_SPACING = 1;
+  static constexpr uint8_t DEFAULT_PARAGRAPH_INDENT_SPACES = 2;
+  static constexpr uint8_t DEFAULT_HYPHENATION_ENABLED = 0;
+  static constexpr uint8_t DEFAULT_EMBEDDED_STYLE = 1;
+  static constexpr uint8_t DEFAULT_FOCUS_READING_ENABLED = 0;
+  static constexpr uint8_t DEFAULT_TEXT_ANTI_ALIASING = 1;
 
   // ---- Profiles -----------------------------------------------------------
   //
