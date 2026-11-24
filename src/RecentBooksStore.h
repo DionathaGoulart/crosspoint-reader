@@ -32,6 +32,14 @@ class RecentBooksStore : public PersistableStore<RecentBooksStore> {
   void toJson(JsonDocument& doc) const;
   bool fromJson(JsonVariantConst doc);
 
+  // Forgets everything held in memory, without touching the card.
+  //
+  // For profiles::switchTo(), which cannot rely on loadFromFile() to do it:
+  // PersistableStore::loadFromFile() returns before calling fromJson() when the
+  // file is missing, which is every profile that has not saved yet. Without
+  // this the next reader would be shown this one's shelf.
+  void reset() { recentBooks.clear(); }
+
   // Add a book to the recent list (moves to front if already exists)
   void addBook(const std::string& path, const std::string& title, const std::string& author,
                const std::string& coverBmpPath);

@@ -19,9 +19,12 @@ namespace profiles {
 // False when the id is unknown or the choice could not be persisted, in which
 // case nothing was reloaded and the previous profile is still active.
 //
-// Call from the main task only, between activities: it reloads the settings the
-// render path reads, so a switch during a frame would draw half of each
-// reader's preferences.
+// Call from the main task, holding a RenderLock. Nothing here enforces that,
+// and the cost of getting it wrong is not a half-drawn frame: UITheme::reload()
+// destroys the theme object the render task calls virtual methods on, and the
+// four store loads read the card the render task is reading fonts and covers
+// from. ProfilesSettingsActivity::switchToProfile() is the only caller and
+// takes the lock.
 bool switchTo(uint8_t id);
 
 }  // namespace profiles

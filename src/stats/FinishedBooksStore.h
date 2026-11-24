@@ -72,6 +72,10 @@ class FinishedBooksStore : public PersistableStore<FinishedBooksStore> {
   void toJson(JsonDocument& doc) const;
   bool fromJson(JsonVariantConst doc);
 
+  // Forgets everything held in memory, without touching the card. See
+  // RecentBooksStore::reset() for why profiles::switchTo() needs this.
+  void reset() { books.clear(); }
+
   bool contains(const std::string& document) const;
   const FinishedBook* find(const std::string& document) const;
 

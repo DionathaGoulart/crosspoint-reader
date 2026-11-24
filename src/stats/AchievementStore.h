@@ -29,6 +29,14 @@ class AchievementStore : public PersistableStore<AchievementStore> {
   void toJson(JsonDocument& doc) const;
   bool fromJson(JsonVariantConst doc);
 
+  // Forgets every unlock held in memory, without touching the card. See
+  // RecentBooksStore::reset() for why profiles::switchTo() needs this. Getting
+  // this wrong is worse here than elsewhere: evaluate() saves, so the previous
+  // reader's unlocks would be written into the new reader's file for good.
+  void reset() {
+    for (auto& at : unlockedAt) at = 0;
+  }
+
   bool isUnlocked(achievements::Id id) const;
   int64_t unlockedEpoch(achievements::Id id) const;
 
