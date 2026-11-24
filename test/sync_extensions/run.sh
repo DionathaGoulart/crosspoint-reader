@@ -10,5 +10,8 @@ c++ -std=c++20 -Wall -Wextra -Werror -Wno-unused-parameter -fno-exceptions -I"$j
   test/sync_extensions/SyncExtensionsTest.cpp src/sync/SyncEngine.cpp src/sync/SyncRequest.cpp src/sync/BookmarkSync.cpp \
   src/clippings/ClippingSync.cpp src/ClippingStore.cpp lib/Utf8/Utf8.cpp \
   src/sync/ReadingSessionLog.cpp src/util/BookmarkFile.cpp src/util/BookmarkUtil.cpp lib/Memory/BuildScratch.cpp \
+  `# readingSessionLog::append() feeds the statistics rollup and resolves its own` \
+  `# path through the active profile, so these three come with it.` \
+  lib/Serialization/ProfilePath.cpp src/stats/StatsRollup.cpp src/stats/StatsAggregate.cpp \
   -o "$build_dir/test"
 "$build_dir/test"
