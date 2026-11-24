@@ -142,7 +142,8 @@ On a button-only device:
 - Use **Up/Down** or **Left/Right** to move one row at a time. Hold a direction to move a page at a time.
 - Press **Confirm** to open the selected book.
 - Press **Back** from the book list to focus the tabs. While the tabs are focused, press **Confirm** to switch to the next tab, hold **Confirm** to reverse the sort direction, press **Up** to open Search, or press **Down** to return to the list.
-- In the Recent view, hold **Confirm** on a book to open its options: **Open**, **Remove from Recents** (opened books only), **Delete**, and **Refresh Library**.
+- In the Recent view, hold **Confirm** on a book to open its options: **Open**, **Read again** (books you have finished), **Like** and **Dislike**, **Remove from Recents** (opened books only), **Delete**, and **Refresh Library**.
+- **Read again** returns the book to its first page and is what makes the next finish count as another reading. Without it, paging to the end of a book you have already finished changes nothing — so you can reread a passage of an old favourite without it counting.
 - In the Title or Author views, hold **Confirm** on a book to collapse the list to its letter or author groups. The matching group remains selected. Press **Confirm** to enter a group, or **Back** to restore the exact book and position you came from.
 - While a search is active in the Title or Author views, hold **Confirm** on a book to delete it. Press **Back** to clear the search.
 
@@ -379,7 +380,9 @@ Side buttons, and Taps and gestures where supported by the device. See the
 
 - **Use book metadata**: Read the title and author stored inside each book when the Library index is rebuilt. When disabled or unavailable, the Library uses the filename.
 
-- **Reading Goals**: Set your own reading targets. Each row steps through a list of values and then back to **Off**, so you can turn a goal off by pressing through to the end of its list. You can set minutes a day, minutes a week, a number of days in a row to keep, and books finished this calendar year. Goals do not measure anything new. They use the same figures as the Statistics screen, so a goal you set today already counts the reading already recorded. Progress appears on the **Goals Home** theme and, for the daily goal, on the **Stats + Wallpaper** sleep screen. Because every goal is measured against a date, they only count once the clock has been set.
+- **Reading Goals**: Set your own reading targets. Each row steps through a list of values and then back to **Off**, so you can turn a goal off by pressing through to the end of its list. You can set minutes a day, minutes a week, a number of days in a row to keep, and books finished this calendar year. A book counts once per year: finishing it again in a later year counts again for that year, but reading it twice in one year counts once. Goals do not measure anything new. They use the same figures as the Statistics screen, so a goal you set today already counts the reading already recorded. Progress appears on the **Goals Home** theme and, for the daily goal, on the **Stats + Wallpaper** sleep screen. Because every goal is measured against a date, they only count once the clock has been set.
+
+- **Profiles**: Keep more than one reader on one device. Each profile has its own reading positions, statistics, goals, recent books, finished books, awards, bookmarks and clippings, and its own reading preferences — font, margins, line height and theme. Wi-Fi, plugins, the library index and the catalogue servers stay shared. The device starts with a single profile and nothing changes until you add a second one; the first profile keeps using the files it always had, so nothing is moved. Deleting a profile deletes its data, and asks first.
 
 - **Refresh Library** (**Settings → Library**): Rescan the SD card for books while preserving the arrival history of books already in the index.
 
@@ -587,7 +590,7 @@ Once any of the options above is set up, press **Confirm** while reading to open
 - **Sync Clippings** is off by default. Enable it only for a compatible CrossPoint Sync server; manual **Sync Progress** then uploads and downloads this book’s clippings too. Leave it off for ordinary KOSync servers.
 - With the server type set to **CrossPoint** or **Other**, manual **Sync Progress** also syncs this book's bookmarks and uploads your reading sessions, if the server offers these features. If it does not, or this step fails, progress sync still continues.
   - **Bookmarks:** each bookmark's position, text excerpt, and name are uploaded. Bookmarks added, renamed, or deleted on one device appear on your other devices after they sync.
-  - **Reading sessions:** CrossPoint records each reading session in `/.crosspoint/reading_sessions.jsonl` on the SD card, even before sync is set up, and never trims that file. Each line also stores the book's path and title, which are not uploaded. A sync uploads sessions the server does not have yet, up to 200 per sync, so a long history is uploaded over several syncs. Each session carries the book id, start time, active reading time, time zone offset, and an id that includes this device's hardware address.
+  - **Reading sessions:** CrossPoint records each reading session in `/.crosspoint/reading_sessions.jsonl` (or `/.crosspoint/profiles/<id>/reading_sessions.jsonl` for a non-default profile) on the SD card, even before sync is set up, and never trims that file. Each line also stores the book's path and title, which are not uploaded. A sync uploads sessions the server does not have yet, up to 200 per sync, so a long history is uploaded over several syncs. Each session carries the book id, start time, active reading time, time zone offset, and an id that includes this device's hardware address.
 - **Sync On Sleep** is off by default. When it is on and you put the device to sleep from an EPUB, CrossPoint joins a saved Wi-Fi network that is in range, preferring the last one you used (if the battery is at least 20%), and syncs that book after the sleep screen appears: bookmarks, reading sessions, clippings if enabled, and your position. Your position is uploaded only when the server is not further ahead; a further position on the server waits for a manual **Sync Progress**. Going to sleep takes a few seconds longer and uses more battery. If the network is not reachable, the device just sleeps.
 - With **Sync Behavior** set to **Ask every time**, choose **Apply Remote** to jump to remote progress or **Upload Local** to push current progress.
 - With **Sync Behavior** set to **Smart sync**, CrossPoint auto-resolves simple cases: upload when no remote progress exists, confirm and leave both unchanged when local and remote progress are already synchronized, upload when local progress is further ahead, or apply remote when remote progress is further ahead.
@@ -771,7 +774,7 @@ To create a bookmark, hold **Confirm** for about half a second while inside a bo
 
 To open bookmarks, press **Confirm** while inside a book. Then navigate to the **Bookmarks** menu. Bookmarks can be opened by navigating to them and pressing **Confirm**, which will redirect you to that place in the book. You can delete bookmarks by holding **Confirm** for about 0.7 seconds, and then pressing **Confirm** again to confirm deletion, or **Back** to cancel.
 
-Bookmarks are stored in the `.crosspoint/bookmarks` folder in the JSON format.
+Bookmarks are stored in the `.crosspoint/bookmarks` folder (or `.crosspoint/profiles/<id>/bookmarks` when a profile other than the default is in use) in the JSON format.
 
 ### 5.3 Clippings and Highlights
 
@@ -781,7 +784,7 @@ Select **View Clippings** to browse saved excerpts for the current book. Press *
 
 Each book can store up to **1,024 clippings on ESP32-S3 devices** or **256 on ESP32-C3 devices**. These limits also apply to clippings downloaded through sync.
 
-The structured clipping store under `.crosspoint/clippings` keeps up to **4 KiB of UTF-8 text per clipping**. Longer selections must be shortened before saving. CrossPoint also appends up to **2,000 UTF-8 bytes** of each saved excerpt to `My Clippings.txt` in the root of the SD card, using Kindle-compatible formatting. If that export fails, the clipping remains saved and the message reports the export failure.
+The structured clipping store under `.crosspoint/clippings` (or `.crosspoint/profiles/<id>/clippings` for a non-default profile) keeps up to **4 KiB of UTF-8 text per clipping**. Longer selections must be shortened before saving. CrossPoint also appends up to **2,000 UTF-8 bytes** of each saved excerpt to `My Clippings.txt` in the root of the SD card, using Kindle-compatible formatting. If that export fails, the clipping remains saved and the message reports the export failure.
 
 Local book and folder moves carry clipping data with them. Deleting a local book removes its local clipping data; it does not delete already synced server copies or historical entries in `My Clippings.txt`. Deleting an individual clipping likewise leaves the text export untouched, but queues its server deletion for the next enabled manual sync. `My Clippings.txt` is an independent append-only export, not the source used to restore or sync highlights.
 

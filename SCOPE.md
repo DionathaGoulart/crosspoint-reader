@@ -14,6 +14,12 @@ CrossPoint exists to do the things the stock firmware does poorly or not at all.
 
 * **Does the stock firmware already do this well?** We should hit that bar or surpass it 
 * **Is another popular CrossPoint fork already solving this well?** If yes, we generally defer to that fork if it's not part of the core reading experience. e.g. stats
+
+  *Fork note: this fork keeps reading statistics and has built on them —
+  reading goals, per-book ratings and reading counts, and per-reader profiles
+  that separate all of that. That is a deliberate local divergence from the
+  rule above, not a proposal: none of it is offered upstream while statistics
+  are deferred to another fork.*
 * **Does this directly improve the reading experience or the firmware's long-term maintainability?** If no, it is out of scope.
 
 ## 3. Current Focus

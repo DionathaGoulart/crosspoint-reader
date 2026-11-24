@@ -47,7 +47,7 @@ In a window, the keyboard stands in for the keys: arrows navigate, Return
 confirms, Escape goes back, `P` is power, `S` enters the sleep screen, `H` is
 home and `T` flips the slide switch.
 
-## Script syntax, and the three traps
+## Script syntax, and the four traps
 
 Steps are `<milliseconds>:<action>`, separated by `;`.
 
@@ -58,6 +58,13 @@ to waste an afternoon here: the run just ends early and nothing says why.
 
 **A real SDL window needs a desktop session.** Scripted runs go headless with
 `SDL_VIDEODRIVER=dummy`, which is what `sim/run.sh` does unless `SIM_WINDOW=1`.
+
+**A run can outlive its script.** The simulator does not always act on `QUIT`,
+and then the program keeps running until something kills it -- the firmware is
+fine, the input script simply stops being delivered. Because `sim/run.sh` pipes
+through `tee`, the log is complete long before that, so the symptom is a command
+that never returns rather than missing output. Run anything interactive in the
+background and kill it on a timer, then read `sim/out/last-run.log`.
 
 **The firmware reopens the last book at boot.** `fs_/` is reused between runs,
 so a run that left a book open does not reach Home, and the next script that
@@ -74,13 +81,48 @@ no `;` inside). `<key>:<hold-ms>` sets the hold; the default is 80 ms.
 one `[SIM] SCREEN:` log line, so a test can assert on a screen without reading
 an image.
 
+## Leaving the home screen
+
+`LEFT` then `ENTER` reaches Settings from a fresh boot on every theme, so that
+is what the example below uses. The reason differs by theme, and the difference
+is worth knowing before writing any other home-screen script.
+
+On the **cover-grid homes** (`uiTheme` Cover Grid or Goals Home) the four keys
+are split into two bands rather than one list: `UP`/`DOWN` walk the covers, and
+`LEFT`/`RIGHT` walk the row of destinations -- Files, Library, Statistics, the
+conditional Plugins/OPDS slot, File Transfer, Settings. A `LEFT` or `RIGHT`
+press while the selection is still on a cover jumps into the destination band
+first, and `LEFT` enters it at the *last* entry, which is Settings.
+`cycleBand()` in `src/activities/home/HomeActivity.cpp` is where that happens.
+
+That slot is why `RIGHT` is the wrong way round to count: it enters the band at
+the *first* entry, and whether Plugins or OPDS sits at position 3 depends on
+`pluginsEnabled` and on whether a catalogue server is saved, so the number of
+presses to any given destination is not fixed.
+
+On the **default Lyra home** there is one flat ring instead, and `LEFT` is
+`NavPrevious` (so is `UP`), which wraps from the first entry to the last --
+again Settings.
+
+So the trap is specific to the cover-grid homes: there, `UP` stays in the cover
+band and `ENTER` opens a book, and the run then sits in the reader while the
+rest of the script presses keys at it. On the Lyra home the same script reaches
+Settings. `fs_/.crosspoint/settings.json` is reused between runs and carries
+`uiTheme`, so which of these applies depends on what the last run left behind.
+
 ## Worked example
 
-Home → Settings → System → Reading goals, cycling the weekly target three times:
+Home → Settings → System → Profiles, switching to the second profile:
 
 ```sh
-sim/run.sh '0:WAIT:Entering activity: Home;800:UP;1600:ENTER;3000:ENTER;4000:DOWN;4400:DOWN;4800:DOWN;5200:DOWN;5600:DOWN;6400:ENTER;7200:DOWN;7900:ENTER;8600:ENTER;9300:ENTER;10200:SHOT:sim/out/goals.bmp;11000:QUIT'
+sim/run.sh '0:WAIT:Entering activity: Home;800:LEFT;1600:ENTER;3000:ENTER;4000:DOWN;4400:DOWN;4800:DOWN;5200:DOWN;5600:DOWN;6000:DOWN;6800:ENTER;8000:SHOT:sim/out/profiles.bmp;8800:DOWN;9600:ENTER;11600:ENTER;13500:SHOT:sim/out/switched.bmp;14500:QUIT'
 ```
+
+The six `DOWN` presses are the System list's row offset of Profiles, so a row
+added above it moves the target. Assert on the screen rather than trusting the
+count: `CROSSPOINT_SIM_SCREEN_TEXT` prints every row, so
+`grep 'SCREEN:.*Profiles' sim/out/last-run.log` says whether the script
+actually arrived.
 
 ## Fork shims
 
