@@ -3,14 +3,29 @@
 #include <HalStorage.h>
 #include <Logging.h>
 #include <Memory.h>
+#include <ProfilePath.h>
 
 #include <algorithm>
 #include <cstring>
 
 namespace {
 
-constexpr char LOG_PATH[] = "/.crosspoint/reading_sessions.jsonl";
-constexpr char CACHE_PATH[] = "/.crosspoint/stats.bin";
+// Per profile: the sessions this reader logged.
+// The directory is ensured here rather than at each writer, because every one
+// of these paths is about to touch the card anyway and a mkdir on a directory
+// that exists is cheaper than a write that fails.
+std::string logPath() {
+  profilePath::ensureActiveDir(/*perProfile=*/true);
+  return profilePath::resolve("reading_sessions.jsonl", /*perProfile=*/true);
+}
+// Per profile: the rollup of this reader's sessions.
+// The directory is ensured here rather than at each writer, because every one
+// of these paths is about to touch the card anyway and a mkdir on a directory
+// that exists is cheaper than a write that fails.
+std::string cacheFilePath() {
+  profilePath::ensureActiveDir(/*perProfile=*/true);
+  return profilePath::resolve("stats.bin", /*perProfile=*/true);
+}
 // readingSessionLog::append() caps a line at 512 bytes plus its newline.
 constexpr size_t MAX_LINE = 512;
 
@@ -44,7 +59,7 @@ bool readLine(HalFile& file, size_t& offset, char* line, const size_t size) {
 
 bool readCache(stats::StatsAggregate& out) {
   HalFile file;
-  if (!Storage.openFileForRead("STATS", CACHE_PATH, file)) return false;
+  if (!Storage.openFileForRead("STATS", cacheFilePath().c_str(), file)) return false;
   const bool sized = file.size() == sizeof(stats::StatsAggregate);
   const bool read = sized && file.read(&out, sizeof(out)) == static_cast<int>(sizeof(out));
   file.close();
@@ -61,7 +76,11 @@ bool readCache(stats::StatsAggregate& out) {
 // cut-short write damages only the throwaway, and a half-written stats.bin
 // would read as a plausible struct full of nonsense.
 bool writeCache(const stats::StatsAggregate& aggregate) {
-  const char* tmpPath = "/.crosspoint/stats.bin.tmp";
+  // Beside the file it replaces, not in the shared root: replaceFile() is a
+  // rename, which FAT will not do across directories, and two profiles
+  // writing one temp file would corrupt each other's rollup.
+  const std::string tmp = profilePath::resolve("stats.bin.tmp", /*perProfile=*/true);
+  const char* tmpPath = tmp.c_str();
   Storage.mkdir("/.crosspoint");
   bool ok = false;
   {
@@ -76,8 +95,8 @@ bool writeCache(const stats::StatsAggregate& aggregate) {
   }
   // SdFat's rename does not overwrite, so the old file goes first. The gap
   // where neither exists reads as "no cache", which only costs a rebuild.
-  Storage.remove(CACHE_PATH);
-  if (!Storage.rename(tmpPath, CACHE_PATH)) {
+  Storage.remove(cacheFilePath().c_str());
+  if (!Storage.rename(tmpPath, cacheFilePath().c_str())) {
     Storage.remove(tmpPath);
     return false;
   }
@@ -86,16 +105,16 @@ bool writeCache(const stats::StatsAggregate& aggregate) {
 
 }  // namespace
 
-const char* statsRollup::cachePath() { return CACHE_PATH; }
+std::string statsRollup::cachePath() { return cacheFilePath(); }
 
-void statsRollup::invalidate() { Storage.remove(CACHE_PATH); }
+void statsRollup::invalidate() { Storage.remove(cacheFilePath().c_str()); }
 
 bool statsRollup::load(stats::StatsAggregate& out) {
   stats::reset(out);
   const bool cached = readCache(out);
   if (!cached) stats::reset(out);
 
-  if (!Storage.exists(LOG_PATH)) {
+  if (!Storage.exists(logPath().c_str())) {
     // No reading yet. An empty aggregate is the honest answer, and a stale
     // cache from a log that was deleted must not survive it.
     if (cached && out.consumedBytes > 0) {
@@ -106,7 +125,7 @@ bool statsRollup::load(stats::StatsAggregate& out) {
   }
 
   HalFile file;
-  if (!Storage.openFileForRead("STATS", LOG_PATH, file)) return cached;
+  if (!Storage.openFileForRead("STATS", logPath().c_str(), file)) return cached;
   const uint64_t logSize = file.size();
 
   // A log shorter than what we folded was replaced or truncated; the only safe

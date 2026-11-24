@@ -7,6 +7,7 @@
 #include <Logging.h>
 #include <Memory.h>
 #include <PersistableStore.h>
+#include <ProfilePath.h>
 #include <TrustedTime.h>
 #include <Utf8.h>
 #include <esp_mac.h>
@@ -20,9 +21,23 @@
 #include "stats/StatsRollup.h"
 
 namespace {
-constexpr char LOG_PATH[] = "/.crosspoint/reading_sessions.jsonl";
+// Per profile: the sessions this reader logged.
+// The directory is ensured here rather than at each writer, because every one
+// of these paths is about to touch the card anyway and a mkdir on a directory
+// that exists is cheaper than a write that fails.
+std::string logPath() {
+  profilePath::ensureActiveDir(/*perProfile=*/true);
+  return profilePath::resolve("reading_sessions.jsonl", /*perProfile=*/true);
+}
 // Upload position in the log, kept per account so a new account receives the whole history.
-constexpr char STATE_PATH[] = "/.crosspoint/reading_sessions_sync.json";
+// Per profile: how far this reader's log has synced.
+// The directory is ensured here rather than at each writer, because every one
+// of these paths is about to touch the card anyway and a mkdir on a directory
+// that exists is cheaper than a write that fails.
+std::string statePath() {
+  profilePath::ensureActiveDir(/*perProfile=*/true);
+  return profilePath::resolve("reading_sessions_sync.json", /*perProfile=*/true);
+}
 
 constexpr size_t BATCH_SIZE = 20;  // server limit per request
 // Bounds one manual sync to 200 sessions when a long history is first uploaded.
@@ -82,7 +97,7 @@ bool saveOffset(const std::string& account, const size_t offset) {
   JsonDocument state;
   state["account"] = account;
   state["offset"] = offset;
-  return PersistableStoreBase::writeDocToFile(STATE_PATH, state);
+  return PersistableStoreBase::writeDocToFile(statePath().c_str(), state);
 }
 }  // namespace
 
@@ -115,7 +130,7 @@ bool readingSessionLog::append(const std::string& document, const std::string& b
   line[length++] = '\n';
 
   Storage.mkdir("/.crosspoint");
-  HalFile file = Storage.open(LOG_PATH, O_RDWR | O_CREAT | O_APPEND);
+  HalFile file = Storage.open(logPath().c_str(), O_RDWR | O_CREAT | O_APPEND);
   if (!file) {
     LOG_ERR("RSL", "Failed to open the reading session log");
     return false;
@@ -141,21 +156,20 @@ bool readingSessionLog::append(const std::string& document, const std::string& b
   // the JSON, at a newline that closed an unfinished record, so the record's
   // own offset is sizeBefore plus that byte. Best effort: statsRollup::load()
   // rebuilds from this log whenever the cache is missing or behind.
-  statsRollup::appendLine(buffer.get() + 1, jsonLength, sizeBefore + (length - jsonLength - 1),
-                          sizeBefore + length);
+  statsRollup::appendLine(buffer.get() + 1, jsonLength, sizeBefore + (length - jsonLength - 1), sizeBefore + length);
   return true;
 }
 
 bool readingSessionLog::upload(SyncRequest& sync) {
-  if (!Storage.exists(LOG_PATH)) return true;
-  HalFile file = Storage.open(LOG_PATH);
+  if (!Storage.exists(logPath().c_str())) return true;
+  HalFile file = Storage.open(logPath().c_str());
   if (!file) return false;
 
   const std::string account = SyncRequest::account();
   size_t offset = 0;
   {
     JsonDocument state;
-    if (PersistableStoreBase::readDocFromFile(STATE_PATH, state) && account == (state["account"] | "")) {
+    if (PersistableStoreBase::readDocFromFile(statePath().c_str(), state) && account == (state["account"] | "")) {
       offset = state["offset"] | static_cast<size_t>(0);
     }
   }

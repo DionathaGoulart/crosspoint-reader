@@ -1,5 +1,6 @@
 #include "BookmarkUtil.h"
 
+#include <ProfilePath.h>
 #include <Utf8.h>
 #include <mbedtls/sha256.h>
 
@@ -9,7 +10,11 @@
 #include <cstring>
 #include <string>
 
-std::string BookmarkUtil::getBookmarksDir() { return "/.crosspoint/bookmarks/"; }
+std::string BookmarkUtil::getBookmarksDir() {
+  // Per profile: a bookmark belongs to whoever placed it.
+  profilePath::ensureActiveDir(/*perProfile=*/true);
+  return profilePath::resolve("bookmarks/", /*perProfile=*/true);
+}
 
 std::string BookmarkUtil::getBookmarkPath(const std::string& bookPath) {
   // remove leading slash and replace internal slashes to create a flat filename

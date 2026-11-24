@@ -49,6 +49,7 @@
 #include "components/UITheme.h"
 #include "fontIds.h"
 #include "platform/UsbSerialJtagHandoff.h"
+#include "profiles/ProfileStore.h"
 #include "sync/SyncEngine.h"
 #include "util/ButtonNavigator.h"
 #include "util/PluginEvents.h"
@@ -756,6 +757,12 @@ void setup() {
   }
 
   HalSystem::checkPanic();
+
+  // First of all the stores, and begin() before any of them: every store that
+  // follows the reader resolves its path from the active profile, so one loaded
+  // ahead of this would read the default profile's files whatever was chosen.
+  PROFILES.loadFromFile();
+  PROFILES.begin();
 
   APP_STATE.loadFromFile();
   const bool isSleepWake = wakeupReason == HalGPIO::WakeupReason::PowerButton;

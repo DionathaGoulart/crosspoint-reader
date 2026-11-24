@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <string>
 
 #include "StatsAggregate.h"
 
@@ -54,7 +55,9 @@ bool appendLine(const char* json, size_t jsonLength, uint64_t lineStart, uint64_
 // Drops stats.bin so the next load() rebuilds. For a settings action or a test.
 void invalidate();
 
-// Path of the cache file, exposed for tests and diagnostics.
-const char* cachePath();
+// Path of the cache file, exposed for tests and diagnostics. By value because
+// it depends on the active profile: a const char* would dangle the moment the
+// temporary it pointed into went away.
+std::string cachePath();
 
 }  // namespace statsRollup

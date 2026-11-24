@@ -3,6 +3,7 @@
 #include <HalStorage.h>
 #include <Logging.h>
 #include <Memory.h>
+#include <ProfilePath.h>
 #include <Serialization.h>
 #include <Utf8.h>
 #include <esp_random.h>
@@ -19,7 +20,14 @@ namespace {
 constexpr uint8_t LEGACY_VERSION = 1;
 constexpr uint8_t LAYOUT_VERSION = 3;
 constexpr uint8_t VERSION = 4;
-constexpr char CLIPPINGS_DIR[] = "/.crosspoint/clippings";
+// Per profile: what this reader highlighted.
+// The directory is ensured here rather than at each writer, because every one
+// of these paths is about to touch the card anyway and a mkdir on a directory
+// that exists is cheaper than a write that fails.
+std::string clippingsDir() {
+  profilePath::ensureActiveDir(/*perProfile=*/true);
+  return profilePath::resolve("clippings", /*perProfile=*/true);
+}
 constexpr size_t TEXT_COPY_BUFFER_SIZE = 128;
 constexpr size_t HEADER_STRING_MAX = CLIPPING_TEXT_MAX;
 
@@ -35,8 +43,7 @@ bool truncateDeletionTail(HalFile& journal) {
 }
 
 std::string storeFilePathForBook(const std::string& filePath, const std::string& bookType) {
-  return std::string(CLIPPINGS_DIR) + "/" + bookType + "_" + std::to_string(std::hash<std::string>{}(filePath)) +
-         ".bin";
+  return clippingsDir() + "/" + bookType + "_" + std::to_string(std::hash<std::string>{}(filePath)) + ".bin";
 }
 
 void copyBounded(char* dst, const size_t dstSize, const char* src) {
@@ -536,7 +543,7 @@ bool ClippingStore::writeToFile(const std::string* replacementText, const size_t
     return false;
   }
   Storage.mkdir("/.crosspoint");
-  Storage.mkdir(CLIPPINGS_DIR);
+  Storage.mkdir(clippingsDir().c_str());
 
   const std::string tmpPath = storeFilePath + ".tmp";
   const std::string backupPath = storeFilePath + ".bak";

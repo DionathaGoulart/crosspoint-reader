@@ -20,6 +20,7 @@ enum class SettingAction {
   CustomiseStatusBar,
   ClockSettings,
   GoalsSettings,
+  ProfilesSettings,
   KOReaderSync,
   OPDSBrowser,
   Network,

@@ -9,6 +9,8 @@
 
 #include <algorithm>
 
+#include "activities/reader/ProgressFile.h"
+
 namespace {
 uint32_t readLe32(const uint8_t* p) {
   return uint32_t(p[0]) | (uint32_t(p[1]) << 8) | (uint32_t(p[2]) << 16) | (uint32_t(p[3]) << 24);
@@ -25,7 +27,7 @@ int loadBookProgress(const std::string& path) {
       return -1;
     }
     HalFile file;
-    if (!Storage.openFileForRead("HOME", epub->getCachePath() + "/progress.bin", file)) return -1;
+    if (!Storage.openFileForRead("HOME", ProgressFile::pathIn(epub->getCachePath()), file)) return -1;
     const int size = file.read(data, sizeof(data));
     file.close();
     if (size != 4 && size != 6 && size != 10) return -1;
@@ -46,7 +48,7 @@ int loadBookProgress(const std::string& path) {
       return -1;
     }
     HalFile file;
-    if (!Storage.openFileForRead("HOME", xtc->getCachePath() + "/progress.bin", file) || file.read(data, 4) != 4)
+    if (!Storage.openFileForRead("HOME", ProgressFile::pathIn(xtc->getCachePath()), file) || file.read(data, 4) != 4)
       return -1;
     file.close();
     if (!xtc->load()) return -1;

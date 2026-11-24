@@ -53,6 +53,7 @@
 #include "SdCardFontSystem.h"
 #include "SilentRestart.h"
 #include "activities/network/WifiSelectionActivity.h"
+#include "activities/reader/ProgressFile.h"
 #include "activities/settings/TextSettingsActivity.h"
 #include "clippings/ClippingText.h"
 #include "clippings/ClippingsManager.h"
@@ -298,7 +299,7 @@ bool EpubReaderActivity::loadBook() {
 
   bool progressLoaded = false;
   HalFile f;
-  if (Storage.openFileForRead("ERS", epub->getCachePath() + "/progress.bin", f)) {
+  if (Storage.openFileForRead("ERS", ProgressFile::pathIn(epub->getCachePath()), f)) {
     uint8_t data[10];
     int dataSize = f.read(data, sizeof(data));
     if (dataSize == 4 || dataSize == 6 || dataSize == 10) {

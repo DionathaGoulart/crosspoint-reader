@@ -483,6 +483,46 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
   uint16_t goalWeeklyMinutes = 0;
   uint16_t goalStreakDays = 0;
   uint16_t goalBooksPerYear = 0;
+
+  // ---- Profiles -----------------------------------------------------------
+  //
+  // Settings that belong to the reader rather than the device, named by their
+  // JSON key. Everything not listed stays with the device, which is the safe
+  // default in both directions: a new setting that should have followed the
+  // reader is merely a shared preference, while one that should not have makes
+  // the device change its orientation or button mapping when someone else picks
+  // up their book.
+  //
+  // With the default profile active there is one file and this list does
+  // nothing. Otherwise these keys are written to the profile's own settings
+  // file and left out of the device's, so one reader's font never becomes the
+  // other's.
+  static bool isProfileSetting(const char* key);
+
+  // The profile's settings file, holding only isProfileSetting() keys. Written
+  // and read by saveToFile()/loadFromFile() below; separate from toJson() so a
+  // sparse overlay cannot reset a device setting to its default.
+  void fillProfileJson(JsonDocument& doc) const;
+
+ private:
+  // Both documents come from here, so there is one description of every
+  // setting and the scope decides which file it lands in.
+  void fillJson(JsonDocument& doc, bool deviceDocument) const;
+
+  // Returns every isProfileSetting() field to the value the struct declares.
+  // Run before each load so one reader's preference cannot survive into the
+  // next; see the comment on the definition for why absence is not enough.
+  void resetProfileSettings();
+
+ public:
+  // These shadow PersistableStore's, deliberately, because 61 call sites say
+  // SETTINGS.saveToFile() and one of them forgetting to say something else
+  // would write a reader's preference into the device's file in silence. Both
+  // call the base version for the device document and then handle the profile
+  // overlay. Not virtual in the base, so a call through PersistableStore<> still
+  // reaches the base: only use these through SETTINGS.
+  bool saveToFile() const;
+  bool loadFromFile();
   // Bluetooth page turner, saved under the keys lib/BlePageTurner reads and writes (BlePageTurnerJson.h).
   bleturner::Config ble;
   // Quick Resume: keep current content visible with moon icon instead of showing a static sleep screen.

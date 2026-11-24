@@ -42,6 +42,10 @@ class FinishedBooksStore : public PersistableStore<FinishedBooksStore> {
   friend class PersistableStore<FinishedBooksStore>;
 
  public:
+  // Books this reader finished, and the count the yearly goal measures.
+  // Follows the active profile; see lib/Serialization/ProfilePath.h.
+  static constexpr bool kPerProfile = true;
+
   static const char* getFilePath() { return "/.crosspoint/finished.json"; }
   void toJson(JsonDocument& doc) const;
   bool fromJson(JsonVariantConst doc);

@@ -25,6 +25,9 @@ class RecentBooksStore : public PersistableStore<RecentBooksStore> {
   friend class PersistableStore<RecentBooksStore>;
 
  public:
+  // The shelf of what this reader opened last. Follows the active profile; see lib/Serialization/ProfilePath.h.
+  static constexpr bool kPerProfile = true;
+
   static const char* getFilePath() { return "/.crosspoint/recent.json"; }
   void toJson(JsonDocument& doc) const;
   bool fromJson(JsonVariantConst doc);

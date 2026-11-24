@@ -22,6 +22,9 @@ class AchievementStore : public PersistableStore<AchievementStore> {
   friend class PersistableStore<AchievementStore>;
 
  public:
+  // Awards are earned by a person, not by a device. Follows the active profile; see lib/Serialization/ProfilePath.h.
+  static constexpr bool kPerProfile = true;
+
   static const char* getFilePath() { return "/.crosspoint/achievements.json"; }
   void toJson(JsonDocument& doc) const;
   bool fromJson(JsonVariantConst doc);
