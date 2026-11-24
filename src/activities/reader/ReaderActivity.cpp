@@ -149,8 +149,9 @@ void ReaderActivity::recordFinishedIfAtEnd(const bool atEnd) {
   // still sitting on the last page, and a later pass should then record it.
   if (trustedtime::trustedNow() <= 0) return;
   // Recorded whether or not the move-to-Read-folder setting is on: the shelf of
-  // finished books must not depend on a setting. markFinished() keeps the first
-  // date, so re-reaching the end costs one no-op save.
+  // finished books must not depend on a setting. markRead() keeps the first
+  // date, and counts another reading only when a reread was asked for, so
+  // paging to the end of an old favourite costs one no-op save.
   finishedbooks::recordFinished(bookPath, getBookTitle(), getBookAuthor(), getBookLanguage());
   finishedRecorded = true;
 }

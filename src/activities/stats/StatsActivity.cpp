@@ -119,6 +119,9 @@ void StatsActivity::rebuildRows() {
     case Tab::Books: {
       const auto& books = FINISHED_BOOKS.getBooks();
       for (size_t i = 0; i < books.size(); ++i) {
+        // An entry with no readings exists only for a rating. This list is
+        // headed "no finished books yet" when empty, so it shows finished ones.
+        if (books[i].timesRead == 0) continue;
         const auto* stat = stats::findBook(*snapshot.aggregate, books[i].document.c_str());
         // The title is what the book called itself when it was finished, so a
         // deleted file still shows a name rather than a path that is gone.
@@ -426,7 +429,17 @@ void StatsActivity::renderBookDetail() {
     line(tr(STR_STATS_TOTAL), duration(stat->secs / 60));
     line(tr(STR_STATS_SESSIONS), number(stat->sessions));
   }
+  // The first finish is the date worth showing; the count says the rest.
   if (book.finishedEpoch > 0) line(tr(STR_STATS_BOOKS_FINISHED), shortDate(book.finishedEpoch));
+  // Only past the first reading: a count of one beside a finish date says
+  // nothing the date did not already say. Its own label, because reusing the
+  // "Finished" one would put two rows of that name next to each other.
+  if (book.timesRead > 1) line(tr(STR_BOOK_READINGS), number(book.timesRead));
+  // I18N.get, not tr(): tr() is a macro that prefixes StrId::, so it cannot
+  // take an expression.
+  if (book.rating != 0) {
+    line(tr(STR_BOOK_RATING), I18N.get(book.rating > 0 ? StrId::STR_BOOK_LIKED : StrId::STR_BOOK_DISLIKED));
+  }
 
   const auto labels = mappedInput.mapLabels(tr(STR_BACK), "", "", "");
   GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);

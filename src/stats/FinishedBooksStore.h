@@ -24,7 +24,23 @@ struct FinishedBook {
   std::string title;
   std::string author;
   std::string language;
+  // The FIRST time the reader reached the end. Kept for the life of the entry:
+  // when someone first finished a book is the fact worth having.
   int64_t finishedEpoch = 0;  // 0 when the clock was not set
+
+  // How many times this book has been read to the end. Zero means the entry
+  // exists for a rating alone, so this -- not the date -- is what "finished"
+  // means. An entry written before this field existed is migrated to 1 on load.
+  uint16_t timesRead = 0;
+  // The most recent finish, where finishedEpoch is the first.
+  int64_t lastFinishedEpoch = 0;
+  // -1 disliked, 0 unrated, +1 liked. A rating alone creates an entry, because
+  // an opinion about a book you abandoned is still an opinion.
+  int8_t rating = 0;
+  // Set only by the reader asking to reread, and cleared when the end is next
+  // reached. Without it, opening a finished book to check one page and paging
+  // to the end would count as another reading.
+  bool rereading = false;
 };
 
 class FinishedBooksStore : public PersistableStore<FinishedBooksStore> {
@@ -41,33 +57,59 @@ class FinishedBooksStore : public PersistableStore<FinishedBooksStore> {
 
   friend class PersistableStore<FinishedBooksStore>;
 
+  // The entry for a book, created from its details when it has none. Null
+  // only when the document id is empty, which means the book could not be
+  // identified at all.
+  FinishedBook* entryFor(const std::string& document, const std::string& path, const std::string& title,
+                         const std::string& author, const std::string& language);
+
  public:
-  // Books this reader finished, and the count the yearly goal measures.
-  // Follows the active profile; see lib/Serialization/ProfilePath.h.
+  // Books this reader finished, and the count the yearly goal measures. Follows the active profile; see
+  // lib/Serialization/ProfilePath.h.
   static constexpr bool kPerProfile = true;
 
   static const char* getFilePath() { return "/.crosspoint/finished.json"; }
   void toJson(JsonDocument& doc) const;
   bool fromJson(JsonVariantConst doc);
 
-  // Records a finished book and persists. Re-finishing a book already recorded
-  // updates its path and metadata and leaves the original date alone: the
-  // first time you reached the end is the interesting one, and re-opening a
-  // finished book to check a quote must not rewrite history.
-  //
-  // Returns true when this call added a book that was not there before, so the
-  // caller can decide whether an achievement or a message is due.
-  bool markFinished(const std::string& document, const std::string& path, const std::string& title,
-                    const std::string& author, const std::string& language, int64_t finishedEpoch);
-
   bool contains(const std::string& document) const;
+  const FinishedBook* find(const std::string& document) const;
 
-  // Newest first.
+  // Records reaching the end. Creates the entry on a first finish; on a book
+  // already recorded it counts another reading only when rereading was armed,
+  // which is what keeps "read one page of an old favourite" from counting.
+  // Returns true when the reading count went up.
+  bool markRead(const std::string& document, const std::string& path, const std::string& title,
+                const std::string& author, const std::string& language, int64_t epoch);
+
+  // Arms or disarms a reread. Creates the entry if the book has no record yet,
+  // so a book finished before this feature existed can still be reread.
+  bool setRereading(const std::string& document, const std::string& path, const std::string& title,
+                    const std::string& author, const std::string& language, bool rereading);
+
+  // -1, 0 or +1; anything else is refused. Creates the entry when needed.
+  bool setRating(const std::string& document, const std::string& path, const std::string& title,
+                 const std::string& author, const std::string& language, int8_t rating);
+
+  // Newest first. Includes entries that exist only for a rating, so a caller
+  // showing "finished books" filters on timesRead.
   const std::vector<FinishedBook>& getBooks() const { return books; }
-  size_t count() const { return books.size(); }
+  // Books actually read to the end. Not books.size(): an entry can exist for a
+  // rating on a book that was never finished, and counting those would inflate
+  // the yearly goal and the awards.
+  size_t finishedCount() const;
 
-  // How many were finished in the calendar year of `epoch`, in local time.
-  size_t countInYear(int64_t epoch) const;
+  // Books that count toward the yearly goal for the calendar year of `now`, in
+  // local time. One per book: rereading it in a later year counts again for
+  // that year, reading it twice inside one year does not.
+  //
+  // Named for the goal rather than for a year because only the first and the
+  // most recent finish carry a date. Asked about the current year -- the only
+  // thing the goal wants -- the most recent finish is by definition the
+  // relevant one, so the answer is exact. Asked about a year in the middle of
+  // three or more readings it would undercount, which is why the parameter is
+  // `now` and not an arbitrary epoch.
+  size_t countTowardYearlyGoal(int64_t now) const;
 };
 
 #define FINISHED_BOOKS FinishedBooksStore::getInstance()

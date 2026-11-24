@@ -97,7 +97,18 @@ class LibraryListActivity final : public UiTabListActivity, private LibraryCover
   void toggleSortDirection();
   // Sub-screens act on button press, so a button still held when we resume must
   // not also act here. Records what to swallow on the next release.
+  // Loaded on the first row-options press of a visit, not on entry; see the
+  // comment there for why.
+  bool finishedBooksLoaded_ = false;
+
   void swallowHeldReleases();
+
+  // Arms a reread and sends the reader back to page one; see the definition
+  // for why clearing the saved position is part of it.
+  void startReread(const std::string& path, const std::string& title);
+  // -1, 0 or +1. `document` is passed in because the caller already
+  // resolved it to decide which label the entry should carry.
+  void setBookRating(const std::string& path, const std::string& title, const std::string& document, int8_t rating);
   // Staged back-out shared by Button::Back and the header back arrow.
   void handleBackAction();
   static void searchActionTrampoline(const freeink::ui::ActionEvent& event, void* user);

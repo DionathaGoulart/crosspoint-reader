@@ -32,6 +32,10 @@ struct Summary {
   int8_t bestHour = -1;
   uint32_t booksStarted = 0;   // books with any reading time
   uint32_t booksFinished = 0;  // from FinishedBooksStore, passed in
+  // Books with a dated finish in the current calendar year, one per book. Not
+  // a subset of booksFinished by the same rule: a reread counts again here in a
+  // later year, while booksFinished counts distinct books and never moves for a
+  // reread. See FinishedBooksStore::countTowardYearlyGoal().
   uint32_t booksThisYear = 0;
   int64_t firstStart = 0;
   int32_t today = 0;  // local day index the figures were built for

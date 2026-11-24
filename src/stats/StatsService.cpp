@@ -24,6 +24,23 @@ int statsService::utcOffsetMinutes(const int64_t at) {
   return std::clamp(static_cast<int>((when - mktime(&utc)) / 60), -720, 840);
 }
 
+namespace {
+
+// The two entry points below derive the same summary; only what they do with
+// the aggregate afterwards differs. Kept in one place so the finished-book
+// rules -- finishedCount() rather than size(), and the yearly goal count --
+// are stated once and cannot drift apart.
+stats::Summary summarizeWith(const stats::StatsAggregate& aggregate, const int64_t now, const int tz) {
+  FINISHED_BOOKS.loadFromFile();
+  // finishedCount(), not size(): an entry can exist for a rating on a book that
+  // was never read, and counting those inflates the yearly goal and the awards.
+  const auto finishedCount = static_cast<uint32_t>(FINISHED_BOOKS.finishedCount());
+  const uint32_t thisYear = now > 0 ? static_cast<uint32_t>(FINISHED_BOOKS.countTowardYearlyGoal(now)) : 0;
+  return stats::summarize(aggregate, finishedCount, thisYear, now, tz);
+}
+
+}  // namespace
+
 statsService::Snapshot statsService::load() {
   Snapshot snapshot;
   snapshot.aggregate = makeUniqueNoThrow<stats::StatsAggregate>();
@@ -39,12 +56,7 @@ statsService::Snapshot statsService::load() {
   snapshot.clockUnset = now <= 0;
   const int tz = now > 0 ? utcOffsetMinutes(now) : 0;
 
-  FINISHED_BOOKS.loadFromFile();
-  const auto& finished = FINISHED_BOOKS.getBooks();
-  const uint32_t finishedCount = static_cast<uint32_t>(finished.size());
-  const uint32_t thisYear = now > 0 ? static_cast<uint32_t>(FINISHED_BOOKS.countInYear(now)) : 0;
-
-  snapshot.summary = stats::summarize(*snapshot.aggregate, finishedCount, thisYear, now, tz);
+  snapshot.summary = summarizeWith(*snapshot.aggregate, now, tz);
   return snapshot;
 }
 
@@ -63,10 +75,7 @@ stats::Summary statsService::summaryOnly() {
 
   const int64_t now = trustedtime::trustedNow();
   const int tz = now > 0 ? utcOffsetMinutes(now) : 0;
-  FINISHED_BOOKS.loadFromFile();
-  const auto finishedCount = static_cast<uint32_t>(FINISHED_BOOKS.count());
-  const uint32_t thisYear = now > 0 ? static_cast<uint32_t>(FINISHED_BOOKS.countInYear(now)) : 0;
-  return stats::summarize(*aggregate, finishedCount, thisYear, now, tz);
+  return summarizeWith(*aggregate, now, tz);
 }
 
 size_t statsService::refreshAchievements(const Snapshot& snapshot, achievements::Id* out, const size_t capacity) {

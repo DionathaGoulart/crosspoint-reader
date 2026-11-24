@@ -1,6 +1,7 @@
 #include "LibraryListActivity.h"
 
 #include <BoardConfig.h>
+#include <Epub.h>
 #include <FreeInkUIIcon.h>
 #include <FsHelpers.h>
 #include <GfxRenderer.h>
@@ -11,6 +12,7 @@
 #include <Logging.h>
 #include <Memory.h>
 #include <Utf8.h>
+#include <Xtc.h>
 
 #include <algorithm>
 #include <cstdio>
@@ -19,6 +21,7 @@
 #include "CrossPointSettings.h"
 #include "MappedInputManager.h"
 #include "RecentBooksStore.h"
+#include "activities/reader/ProgressFile.h"
 #include "activities/util/ConfirmationActivity.h"
 #include "activities/util/KeyboardEntryActivity.h"
 #include "components/UIScale.h"
@@ -27,6 +30,7 @@
 #include "components/icons/listIcons.h"
 #include "components/icons/search32.h"
 #include "fontIds.h"
+#include "stats/FinishedBooksStore.h"
 #include "util/BookCacheUtils.h"
 #include "util/BookThumbnail.h"
 
@@ -98,6 +102,10 @@ void LibraryListActivity::onEnter() {
   // needs the card to itself.
   RenderLock lock(*this);
   UiTabListActivity::onEnter();
+  // Not loaded here: see showRecentBookOptions(), which loads it on the first
+  // press that needs it. Entering the library is the common path and parsing up
+  // to 500 records under the render lock is not free on a device with no PSRAM.
+  finishedBooksLoaded_ = false;
   app.on(ACTION_SEARCH, &LibraryListActivity::searchActionTrampoline, this);
   app.on(ACTION_REBUILD, &LibraryListActivity::rebuildActionTrampoline, this);
   app.on(ACTION_BACK, &LibraryListActivity::backActionTrampoline, this);
@@ -304,33 +312,75 @@ void LibraryListActivity::showRecentBookOptions(const int entry) {
     }
   }
 
-  const char* STORE_OPTIONS[] = {tr(STR_OPEN), tr(STR_REMOVE_FROM_RECENTS), tr(STR_DELETE), tr(STR_LIBRARY_REBUILD)};
-  const char* INDEX_OPTIONS[] = {tr(STR_OPEN), tr(STR_DELETE), tr(STR_LIBRARY_REBUILD)};
+  // Labels and actions are built as one pair of lists rather than a switch over
+  // indices that shift with the row type. Which entries apply depends on both
+  // the row (only a recent can be un-pinned) and the book (only one that has
+  // been read can be reread), and an index switch over that is the same
+  // "two lists must agree by counting" hazard that put the wrong destination
+  // behind the home screen's icons.
+  enum Action : uint8_t { Open, Reread, Like, Dislike, Unpin, Delete, Rebuild };
+  std::vector<const char*> options;
+  std::vector<Action> actions;
+  // Reserved: seven is the most this can hold, and growing by doubling would
+  // be four allocations each on a button press.
+  options.reserve(7);
+  actions.reserve(7);
+  const auto add = [&options, &actions](const char* label, const Action action) {
+    options.push_back(label);
+    actions.push_back(action);
+  };
+
+  // Nothing loads this store at boot -- statsService reads it when statistics
+  // are asked for -- so without this the options would show no reread and no
+  // rating for a book that has both. Once per visit, on the first press that
+  // needs it rather than on the way in.
+  if (!finishedBooksLoaded_) {
+    FINISHED_BOOKS.loadFromFile();
+    finishedBooksLoaded_ = true;
+  }
+  const std::string document = finishedbooks::documentIdFor(path);
+  const FinishedBook* record = document.empty() ? nullptr : FINISHED_BOOKS.find(document);
+  const bool hasBeenRead = record != nullptr && record->timesRead > 0;
+  const int8_t rating = record != nullptr ? record->rating : 0;
+
+  add(tr(STR_OPEN), Open);
+  // Rereading is only offered for a book already finished: on anything else it
+  // would mean nothing, and the counter it arms would never fire.
+  if (hasBeenRead) add(tr(STR_BOOK_REREAD), Reread);
+  // Each rating entry toggles, so the same press that sets it clears it. The
+  // label says which way it will go.
+  add(rating > 0 ? tr(STR_BOOK_UNLIKE) : tr(STR_BOOK_LIKE), Like);
+  add(rating < 0 ? tr(STR_BOOK_UNDISLIKE) : tr(STR_BOOK_DISLIKE), Dislike);
+  if (isStoreRow) add(tr(STR_REMOVE_FROM_RECENTS), Unpin);
+  add(tr(STR_DELETE), Delete);
+  add(tr(STR_LIBRARY_REBUILD), Rebuild);
+
   app.clearTapFlash();
-  optionPopup.show(tr(STR_LIBRARY), title.c_str(), isStoreRow ? STORE_OPTIONS : INDEX_OPTIONS, isStoreRow ? 4 : 3, 0,
-                   [this, path, title, isStoreRow](const int choice) {
+  optionPopup.show(tr(STR_LIBRARY), title.c_str(), options.data(), static_cast<int>(options.size()), 0,
+                   [this, path, title, actions, document, rating](const int choice) {
                      swallowHeldReleases();
-                     switch (choice) {
-                       case 0:
+                     if (choice < 0 || choice >= static_cast<int>(actions.size())) return;
+                     switch (actions[static_cast<size_t>(choice)]) {
+                       case Open:
                          openBookByPath(path);
                          break;
-                       case 1:
-                         if (isStoreRow) {
-                           promptRemoveRecentBook(path, title);
-                         } else {
-                           promptDeleteBookByPath(path, title);
-                         }
+                       case Reread:
+                         startReread(path, title);
                          break;
-                       case 2:
-                         if (isStoreRow)
-                           promptDeleteBookByPath(path, title);
-                         else
-                           promptRebuildIndex();
+                       case Like:
+                         setBookRating(path, title, document, rating > 0 ? 0 : 1);
                          break;
-                       case 3:
-                         if (isStoreRow) promptRebuildIndex();
+                       case Dislike:
+                         setBookRating(path, title, document, rating < 0 ? 0 : -1);
                          break;
-                       default:
+                       case Unpin:
+                         promptRemoveRecentBook(path, title);
+                         break;
+                       case Delete:
+                         promptDeleteBookByPath(path, title);
+                         break;
+                       case Rebuild:
+                         promptRebuildIndex();
                          break;
                      }
                    });
@@ -1302,4 +1352,47 @@ void LibraryListActivity::drawFooter() {
   const auto labels = mappedInput.mapLabels(backLabel, tabsFocused() ? tr(STR_TOGGLE) : confirmLabel,
                                             canSearch ? tr(STR_SEARCH) : tr(STR_DIR_UP), tr(STR_DIR_DOWN));
   GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+}
+
+void LibraryListActivity::startReread(const std::string& path, const std::string& title) {
+  const std::string document = finishedbooks::documentIdFor(path);
+  if (document.empty()) {
+    LOG_ERR("LIB", "Cannot identify book for reread");
+    return;
+  }
+  std::string author;
+  // Arms the counter: reaching the end of a book already read counts another
+  // reading only when this is set, which is what keeps dipping into an old
+  // favourite from inflating the count.
+  if (!FINISHED_BOOKS.setRereading(document, path, title, author, std::string(), true)) {
+    LOG_ERR("LIB", "Could not arm reread");
+    return;
+  }
+
+  // Back to the first page. Reaching the end does not clear the saved
+  // position, so without this the book would reopen where it finished and the
+  // reader would have to page back by hand. The parsed layout, the cover and
+  // the thumbnails are untouched -- only this reader's place in the book goes.
+  const std::string cachePath = FsHelpers::hasXtcExtension(path) ? Xtc(path, "/.crosspoint").getCachePath()
+                                                                 : Epub(path, "/.crosspoint").getCachePath();
+  const std::string progress = ProgressFile::pathIn(cachePath);
+  if (Storage.exists(progress.c_str()) && !Storage.remove(progress.c_str())) {
+    // The reread is still armed, so the count will be right; the reader just
+    // starts where they left off and can navigate back themselves.
+    LOG_ERR("LIB", "Could not clear progress for reread: %s", progress.c_str());
+  }
+  openBookByPath(path);
+}
+
+void LibraryListActivity::setBookRating(const std::string& path, const std::string& title, const std::string& document,
+                                        const int8_t rating) {
+  if (document.empty()) {
+    LOG_ERR("LIB", "Cannot identify book to rate");
+    return;
+  }
+  std::string author;
+  if (!FINISHED_BOOKS.setRating(document, path, title, author, std::string(), rating)) {
+    LOG_ERR("LIB", "Could not set rating");
+  }
+  requestUpdate();
 }
