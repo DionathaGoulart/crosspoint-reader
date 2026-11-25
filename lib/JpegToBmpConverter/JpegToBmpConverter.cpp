@@ -295,8 +295,27 @@ bool JpegToBmpConverter::jpegFileToBmpStreamInternal(HalFile& jpegFile, Print& b
     return false;
   }
 
-  const int scaleSrcWidth = decodedSrcWidth;
-  const int scaleSrcHeight = decodedSrcHeight;
+  // Baseline streams can decode at 1/2, 1/4 or 1/8 size, which skips most of
+  // the IDCT work. Use the smallest grid that still covers the output, so a
+  // 1600x2400 cover going into a ~300 px thumbnail decodes at 1/4 instead of
+  // full size; the row scaler then averages the rest as before.
+  int decodeScale = 0;
+  int scaleSrcWidth = decodedSrcWidth;
+  int scaleSrcHeight = decodedSrcHeight;
+  if (!progressiveDecode) {
+    static constexpr int kScaleOptions[] = {JPEG_SCALE_EIGHTH, JPEG_SCALE_QUARTER, JPEG_SCALE_HALF};
+    for (int i = 0; i < 3; ++i) {
+      const int shift = 3 - i;
+      const int w = (srcWidth + (1 << shift) - 1) >> shift;
+      const int h = (srcHeight + (1 << shift) - 1) >> shift;
+      if (w >= outWidth && h >= outHeight) {
+        decodeScale = kScaleOptions[i];
+        scaleSrcWidth = w;
+        scaleSrcHeight = h;
+        break;
+      }
+    }
+  }
   const bool needsScaling = scaleSrcWidth != outWidth || scaleSrcHeight != outHeight;
   const bool smoothUpscale =
       progressiveDecode && needsScaling && scaleSrcWidth <= outWidth && scaleSrcHeight <= outHeight;
@@ -346,7 +365,7 @@ bool JpegToBmpConverter::jpegFileToBmpStreamInternal(HalFile& jpegFile, Print& b
   jpeg->setPixelType(EIGHT_BIT_GRAYSCALE);
   jpeg->setUserPointer(&ctx);
 
-  rc = jpeg->decode(0, 0, 0);
+  rc = jpeg->decode(0, 0, decodeScale);
 
   if (rc == 1 && ctx.smoothUpscale && !ctx.error) {
     finishSmoothUpscale(&ctx);
