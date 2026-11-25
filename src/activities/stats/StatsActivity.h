@@ -7,8 +7,9 @@
 #include "activities/UiTabListActivity.h"
 #include "components/themes/BaseTheme.h"  // Rect
 #include "stats/StatsService.h"
+#include "stats/YearReview.h"
 
-// Reading statistics, as four tabs of rows.
+// Reading statistics, as five tabs of rows; the last is a year-by-year review.
 //
 // Rows rather than a hand-laid grid of cards: UiTabListActivity already owns
 // tab navigation, the selection ring, viewport scrolling and the button
@@ -28,7 +29,7 @@ class StatsActivity final : public UiTabListActivity {
   void render(RenderLock&&) override;
 
  private:
-  enum class Tab : uint8_t { Summary, Books, Habits, Awards, Count };
+  enum class Tab : uint8_t { Summary, Books, Habits, Awards, Years, Count };
 
   // --- UiTabListActivity contract --------------------------------------------
   int listCount() const override;
@@ -50,6 +51,8 @@ class StatsActivity final : public UiTabListActivity {
   // and left with Back; the cover is worth a whole screen on a panel this size,
   // and a thumbnail in a row would be unreadable.
   void renderBookDetail();
+  // One year: its figures, its book goal and the books finished in it.
+  void renderYearDetail();
   void drawMonthMap(int top) const;
   void drawSummaryPanel() const;
   void drawStatTile(const Rect& box, const char* label, const char* value, bool emphasis = false) const;
@@ -58,6 +61,10 @@ class StatsActivity final : public UiTabListActivity {
   Tab tab = Tab::Summary;
   // -1 while the list is showing; otherwise the index into finishedBooks.
   int detailIndex = -1;
+  // -1 while the list is showing; otherwise the index into reviewYears.
+  int detailYear = -1;
+  // Built once per entry from the snapshot; a year is a few hundred bytes.
+  std::vector<yearreview::Year> reviewYears;
 
   // Row storage, rebuilt on tab switch rather than per render.
   std::vector<freeink::ui::ListItem> rowItems;

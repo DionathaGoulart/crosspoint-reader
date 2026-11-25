@@ -9,11 +9,13 @@
 #include <cstdio>
 #include <ctime>
 
+#include "CrossPointSettings.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
 #include "stats/AchievementStore.h"
 #include "stats/FinishedBooksStore.h"
 #include "stats/StatsText.h"
+#include "stats/YearGoalsStore.h"
 
 namespace fui = freeink::ui;
 
@@ -56,6 +58,20 @@ void StatsActivity::onEnter() {
   // repaint must never pay for it.
   snapshot = statsService::load();
   statsService::refreshAchievements(snapshot);
+  // Keep this year's goal on record, so next year's review still knows it.
+  YEAR_GOALS.recordCurrent(SETTINGS.goalBooksPerYear);
+  YEAR_GOALS.ensureLoaded();
+  int currentYear = 0;
+  if (!snapshot.clockUnset) {
+    const time_t now = static_cast<time_t>(std::time(nullptr));
+    struct tm local{};
+    localtime_r(&now, &local);
+    currentYear = local.tm_year + 1900;
+  }
+  reviewYears.clear();
+  for (const int year : yearreview::years(FINISHED_BOOKS.getBooks(), snapshot.aggregate.get(), currentYear)) {
+    reviewYears.push_back(yearreview::build(year, FINISHED_BOOKS.getBooks(), snapshot.aggregate.get()));
+  }
   rebuildRows();
   UiTabListActivity::onEnter();
 }
@@ -72,6 +88,8 @@ const char* StatsActivity::tabLabel(const int index) const {
       return tr(STR_STATS_TAB_HABITS);
     case Tab::Awards:
       return tr(STR_STATS_TAB_AWARDS);
+    case Tab::Years:
+      return tr(STR_STATS_TAB_YEARS);
     default:
       return "";
   }
@@ -84,8 +102,11 @@ void StatsActivity::switchTab(const int direction) {
   const int next = ((static_cast<int>(tab) + direction) % count + count) % count;
   tab = static_cast<Tab>(next);
   detailIndex = -1;
+  detailYear = -1;
   rebuildRows();
-  activeNav().selected = -1;
+  // Focus stays on the tab bar, as everywhere else: Confirm keeps stepping tabs.
+  activeNav().selected = 0;
+  activeNav().top = 0;
   requestUpdate();
 }
 
@@ -93,8 +114,11 @@ void StatsActivity::onTabAction(const int index) {
   if (index == static_cast<int>(tab)) return;
   tab = static_cast<Tab>(index);
   detailIndex = -1;
+  detailYear = -1;
   rebuildRows();
-  activeNav().selected = -1;
+  // Focus stays on the tab bar, as everywhere else: Confirm keeps stepping tabs.
+  activeNav().selected = 0;
+  activeNav().top = 0;
   requestUpdate();
 }
 
@@ -177,6 +201,17 @@ void StatsActivity::rebuildRows() {
       break;
     }
 
+    case Tab::Years:
+      for (const yearreview::Year& year : reviewYears) {
+        // "5 books · 12 h": the two figures a year is remembered by.
+        std::string value = year.books.size() == 1
+                                ? std::string(tr(STR_YEAR_ONE_BOOK))
+                                : formatted(StrId::STR_YEAR_BOOKS_UNIT, static_cast<uint32_t>(year.books.size()));
+        if (year.minutes > 0) value += " · " + duration(year.minutes);
+        add(number(static_cast<uint32_t>(year.year)), std::move(value));
+      }
+      break;
+
     default:
       break;
   }
@@ -204,7 +239,9 @@ void StatsActivity::buildScreen(UiScreen& screen) {
 
   if (rowItems.empty()) {
     const auto body = screen.body();
-    const StrId message = tab == Tab::Books ? StrId::STR_STATS_NO_BOOKS : StrId::STR_STATS_NO_DATA;
+    const StrId message = tab == Tab::Books   ? StrId::STR_STATS_NO_BOOKS
+                          : tab == Tab::Years ? StrId::STR_STATS_CLOCK_UNSET
+                                              : StrId::STR_STATS_NO_DATA;
     fui::TextStyle style = screen.theme().smallText;
     style.align = fui::TextAlign::Center;
     style.maxLines = 3;
@@ -238,13 +275,14 @@ void StatsActivity::drawStatTile(const Rect& box, const char* label, const char*
   const int valueWidth = renderer.getTextWidth(valueFont, value, EpdFontFamily::BOLD);
   const int labelHeight = renderer.getLineHeight(SMALL_FONT_ID);
   const int valueHeight = renderer.getLineHeight(valueFont);
+  constexpr int kLineGap = 4;
   // The pair is centred as a block, so tiles of different heights still line
-  // their contents up with each other.
-  const int top = box.y + (box.height - valueHeight - labelHeight - 6) / 2;
-  renderer.drawText(valueFont, box.x + (box.width - valueWidth) / 2, top + valueHeight - 4, value, true,
-                    EpdFontFamily::BOLD);
+  // their contents up with each other. drawText() takes the top of the line
+  // box, so the label starts one value line below the value.
+  const int top = box.y + (box.height - valueHeight - kLineGap - labelHeight) / 2;
+  renderer.drawText(valueFont, box.x + (box.width - valueWidth) / 2, top, value, true, EpdFontFamily::BOLD);
   const int labelWidth = renderer.getTextWidth(SMALL_FONT_ID, label);
-  renderer.drawText(SMALL_FONT_ID, box.x + (box.width - labelWidth) / 2, top + valueHeight + labelHeight + 2, label);
+  renderer.drawText(SMALL_FONT_ID, box.x + (box.width - labelWidth) / 2, top + valueHeight + kLineGap, label);
 }
 
 // Total up top, then four figures, then the three that describe consistency,
@@ -336,6 +374,12 @@ void StatsActivity::drawMonthMap(const int top) const {
 }
 
 void StatsActivity::activateIndex(const int index) {
+  if (tab == Tab::Years) {
+    if (index < 0 || static_cast<size_t>(index) >= reviewYears.size()) return;
+    detailYear = index;
+    requestUpdate();
+    return;
+  }
   if (tab != Tab::Books) return;
   if (index < 0 || static_cast<size_t>(index) >= bookOrder.size()) return;
   detailIndex = index;
@@ -344,8 +388,9 @@ void StatsActivity::activateIndex(const int index) {
 
 bool StatsActivity::handleButtons() {
   if (mappedInput.wasReleased(MappedInputManager::Button::Back)) {
-    if (detailIndex >= 0) {
+    if (detailIndex >= 0 || detailYear >= 0) {
       detailIndex = -1;
+      detailYear = -1;
       requestUpdate();
       return true;
     }
@@ -354,8 +399,9 @@ bool StatsActivity::handleButtons() {
   }
 
   if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
-    if (detailIndex >= 0) {
+    if (detailIndex >= 0 || detailYear >= 0) {
       detailIndex = -1;
+      detailYear = -1;
       requestUpdate();
       return true;
     }
@@ -370,6 +416,10 @@ bool StatsActivity::handleButtons() {
 }
 
 void StatsActivity::render(RenderLock&& lock) {
+  if (detailYear >= 0) {
+    renderYearDetail();
+    return;
+  }
   if (detailIndex < 0) {
     UiTabListActivity::render(std::move(lock));
     return;
@@ -439,6 +489,106 @@ void StatsActivity::renderBookDetail() {
   // take an expression.
   if (book.rating != 0) {
     line(tr(STR_BOOK_RATING), I18N.get(book.rating > 0 ? StrId::STR_BOOK_LIKED : StrId::STR_BOOK_DISLIKED));
+  }
+
+  const auto labels = mappedInput.mapLabels(tr(STR_BACK), "", "", "");
+  GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+  renderer.displayBuffer();
+}
+
+void StatsActivity::renderYearDetail() {
+  if (detailYear < 0 || static_cast<size_t>(detailYear) >= reviewYears.size()) {
+    detailYear = -1;
+    return;
+  }
+  const yearreview::Year& year = reviewYears[static_cast<size_t>(detailYear)];
+  const auto& books = FINISHED_BOOKS.getBooks();
+  const auto& metrics = UITheme::getInstance().getMetrics();
+  const int pageWidth = renderer.getScreenWidth();
+  const int pageHeight = renderer.getScreenHeight();
+
+  renderer.clearScreen();
+  char title[48];
+  std::snprintf(title, sizeof(title), I18N.get(StrId::STR_YEAR_REVIEW_TITLE), year.year);
+  GUI.drawHeader(renderer, Rect{0, metrics.topPadding, pageWidth, metrics.headerHeight}, title);
+
+  const int left = 14;
+  const int width = pageWidth - left * 2;
+  const int gap = 8;
+  const int bottom = pageHeight - metrics.buttonHintsHeight - 8;
+  int y = metrics.topPadding + metrics.headerHeight + 14;
+
+  char value[32];
+  statsText::duration(value, sizeof(value), year.minutes);
+  const int heroHeight = 78;
+  drawStatTile(Rect{left, y, width, heroHeight}, tr(STR_STATS_TOTAL), value, true);
+  y += heroHeight + gap;
+
+  const int thirdWidth = (width - gap * 2) / 3;
+  const int tileHeight = 62;
+  const auto third = [&](const int column, const int row) {
+    return Rect{left + column * (thirdWidth + gap), y + row * (tileHeight + gap), thirdWidth, tileHeight};
+  };
+  std::snprintf(value, sizeof(value), "%u", static_cast<unsigned>(year.books.size()));
+  drawStatTile(third(0, 0), tr(STR_YEAR_BOOKS_READ), value);
+  std::snprintf(value, sizeof(value), "%u", static_cast<unsigned>(year.daysRead));
+  drawStatTile(third(1, 0), tr(STR_STATS_DAYS_READ), value);
+  std::snprintf(value, sizeof(value), "%u", static_cast<unsigned>(year.longestStreak));
+  drawStatTile(third(2, 0), tr(STR_STATS_RECORD), value);
+
+  // The goal the year had, not today's: a target raised in January must not
+  // turn last year's success into a miss.
+  const uint16_t target = YEAR_GOALS.booksTarget(year.year);
+  if (target > 0) {
+    std::snprintf(value, sizeof(value), "%u/%u", static_cast<unsigned>(year.books.size()),
+                  static_cast<unsigned>(target));
+  } else {
+    std::snprintf(value, sizeof(value), "--");
+  }
+  const bool goalMet = target > 0 && year.books.size() >= target;
+  drawStatTile(third(0, 1), goalMet ? tr(STR_YEAR_GOAL_MET) : tr(STR_YEAR_BOOK_GOAL), value, false);
+  if (year.bestMonth > 0) {
+    std::snprintf(value, sizeof(value), "%02d/%d", year.bestMonth, year.year);
+  } else {
+    std::snprintf(value, sizeof(value), "--");
+  }
+  drawStatTile(third(1, 1), tr(STR_YEAR_BEST_MONTH), value);
+  statsText::duration(value, sizeof(value), year.daysRead > 0 ? year.minutes / year.daysRead : 0);
+  drawStatTile(third(2, 1), tr(STR_STATS_AVG_READ_DAY), value);
+  y += tileHeight * 2 + gap * 2 + 6;
+
+  const int lineHeight = renderer.getLineHeight(SMALL_FONT_ID);
+  const int noteLines = year.partial ? 2 : 0;
+  const int listBottom = bottom - noteLines * lineHeight;
+  renderer.drawText(UI_10_FONT_ID, left, y, tr(STR_YEAR_BOOKS_READ), true, EpdFontFamily::BOLD);
+  y += renderer.getLineHeight(UI_10_FONT_ID) + 6;
+  if (year.books.empty()) {
+    renderer.drawText(SMALL_FONT_ID, left, y, tr(STR_YEAR_NO_BOOKS));
+  } else {
+    const int rowStep = lineHeight + 6;
+    const int fits = std::max(0, (listBottom - y) / rowStep);
+    const size_t total = year.books.size();
+    // The last line says how many did not fit rather than cutting one off.
+    const size_t shown = total <= static_cast<size_t>(fits) ? total : static_cast<size_t>(std::max(0, fits - 1));
+    for (size_t i = 0; i < shown; ++i) {
+      const FinishedBook& book = books[year.books[i]];
+      const int64_t at = book.lastFinishedEpoch > 0 ? book.lastFinishedEpoch : book.finishedEpoch;
+      const std::string date = shortDate(at);
+      const int dateWidth = renderer.getTextWidth(SMALL_FONT_ID, date.c_str());
+      const std::string name = renderer.truncatedText(
+          SMALL_FONT_ID, book.title.empty() ? book.path.c_str() : book.title.c_str(), width - dateWidth - 12);
+      renderer.drawText(SMALL_FONT_ID, left, y, name.c_str());
+      renderer.drawText(SMALL_FONT_ID, left + width - dateWidth, y, date.c_str());
+      y += rowStep;
+    }
+    if (shown < total) {
+      std::snprintf(value, sizeof(value), I18N.get(StrId::STR_YEAR_MORE_BOOKS), static_cast<unsigned>(total - shown));
+      renderer.drawText(SMALL_FONT_ID, left, y, value);
+    }
+  }
+  if (year.partial) {
+    UITheme::drawCenteredWrappedText(renderer, Rect{left, listBottom, width, noteLines * lineHeight}, SMALL_FONT_ID,
+                                     tr(STR_YEAR_PARTIAL), 2);
   }
 
   const auto labels = mappedInput.mapLabels(tr(STR_BACK), "", "", "");

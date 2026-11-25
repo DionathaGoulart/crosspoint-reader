@@ -87,7 +87,8 @@ an image.
 is what the example below uses. The reason differs by theme, and the difference
 is worth knowing before writing any other home-screen script.
 
-On the **cover-grid homes** (`uiTheme` Cover Grid or Goals Home) the four keys
+On the **cover-grid homes** (`uiTheme` Cover Grid or GoodTheme, which the code
+calls Goals Home) the four keys
 are split into two bands rather than one list: `UP`/`DOWN` walk the covers, and
 `LEFT`/`RIGHT` walk the row of destinations -- Files, Library, Statistics, the
 conditional Plugins/OPDS slot, File Transfer, Settings. A `LEFT` or `RIGHT`
@@ -104,8 +105,12 @@ On the **default Lyra home** there is one flat ring instead, and `LEFT` is
 `NavPrevious` (so is `UP`), which wraps from the first entry to the last --
 again Settings.
 
-So the trap is specific to the cover-grid homes: there, `UP` stays in the cover
-band and `ENTER` opens a book, and the run then sits in the reader while the
+When the home shows one cover or none (always on GoodTheme, or Cover Grid with
+a single recent book), `UP`/`DOWN` walk the whole row instead: cover, then
+every destination.
+
+So the trap is specific to Cover Grid with two or more recent books: there,
+`UP` stays in the cover band and `ENTER` opens a book, and the run then sits in the reader while the
 rest of the script presses keys at it. On the Lyra home the same script reaches
 Settings. `fs_/.crosspoint/settings.json` is reused between runs and carries
 `uiTheme`, so which of these applies depends on what the last run left behind.

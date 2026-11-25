@@ -128,12 +128,14 @@ The Browse Files screen acts as a file and folder browser. The full path to the 
 
 ### 3.4 Library Screen
 
-The Library indexes up to 4,096 supported books on the SD card and shows their titles and authors without requiring you to remember their folders. Its four tabs provide different views. An arrow beside the active tab shows the sort direction:
+The Library indexes up to 4,096 supported books on the SD card and shows their titles and authors without requiring you to remember their folders. Its four tabs provide different views. An arrow beside the active tab shows the sort direction. A book you have finished appears only on the **Read** tab:
 
-- **Recent** shows the books you opened most recently (up to ten) at the top, followed by the rest of the library ordered by when each file arrived on the card. Down shows the newest first; up shows the oldest files first, without the opened books on top. With **Hide New Files in Recent** turned on, the tab lists only the books you opened: down shows the most recently opened first, and up shows the least recently opened first. The setting applies only while no search is active; search results include books you have not opened.
-- **Title** groups books by the first letter of the title. Up sorts A-Z and down sorts Z-A. Titles beginning with numbers or punctuation appear under `#`; letters from non-English scripts, including Hebrew, have their own groups.
-- **Author** groups books by author. Up sorts A-Z and down sorts Z-A.
-- **Folders** groups books by the folder they sit in on the card. Folders are listed in alphabetical order of their path, and the books inside each one are sorted by title. Up sorts the books inside each folder A-Z and down sorts them Z-A; the folders themselves always stay in alphabetical order. With more than 256 folders they keep the order in which they were found on the card. Books at the root of the card appear under `/`. Use this view if you sort your books into folders yourself: the shelf keeps those folders instead of mixing every book into one list.
+- **Recent** shows the books you opened most recently (up to ten) at the top, followed by the rest of the library ordered by when each file arrived on the card. Down shows the newest first; up shows the oldest files first, without the opened books on top. With **Hide New Files in Recent** turned on, the tab lists only the books you opened: down shows the most recently opened first, and up shows the least recently opened first. The setting applies only while no search is active; search results include books you have not opened, and books you have finished.
+- **Name** lists books by title. Up sorts A-Z and down sorts Z-A. Titles beginning with numbers or punctuation appear under `#`; letters from non-English scripts, including Hebrew, have their own groups.
+- **To read** is your reading queue: the books you added with **Add to reading queue**, in the order you added them. A book leaves the queue when you finish it.
+- **Read** lists the books you have finished, the most recently finished first. A book you are reading again (**Read again**) moves back to Recent and Name with a **Rereading** tag until you finish it.
+
+Books in the queue or being reread carry a small **To read** or **Rereading** tag, next to the title in the list or on the cover in the cover view.
 
 `My Clippings.txt` and `crash_report.txt` are not listed in the Library. They remain available in the file browser.
 
@@ -142,16 +144,16 @@ On a button-only device:
 - Use **Up/Down** or **Left/Right** to move one row at a time. Hold a direction to move a page at a time.
 - Press **Confirm** to open the selected book.
 - Press **Back** from the book list to focus the tabs. While the tabs are focused, press **Confirm** to switch to the next tab, hold **Confirm** to reverse the sort direction, press **Up** to open Search, or press **Down** to return to the list.
-- In the Recent view, hold **Confirm** on a book to open its options: **Open**, **Read again** (books you have finished), **Like** and **Dislike**, **Remove from Recents** (opened books only), **Delete**, and **Refresh Library**.
+- Hold **Confirm** on a book to open its options: **Open**, **Add to reading queue** or **Remove from queue**, **Read again** (books you have finished), **Like** and **Dislike**, **Group by letter** (Name tab), **Remove from Recents** (opened books only), **Delete**, and **Refresh Library**.
 - **Read again** returns the book to its first page and is what makes the next finish count as another reading. Without it, paging to the end of a book you have already finished changes nothing — so you can reread a passage of an old favourite without it counting.
-- In the Title or Author views, hold **Confirm** on a book to collapse the list to its letter or author groups. The matching group remains selected. Press **Confirm** to enter a group, or **Back** to restore the exact book and position you came from.
-- While a search is active in the Title or Author views, hold **Confirm** on a book to delete it. Press **Back** to clear the search.
+- On the Name tab, **Group by letter** collapses the list to its letter groups. The matching group remains selected. Press **Confirm** to enter a group, or **Back** to restore the exact book and position you came from.
+- Press **Back** to clear an active search.
 
-On a touch device, tap tabs, books, and the Search icon directly. Tap the active tab again to reverse its sort direction. Swipe up or down to scroll. Long-press a book in the Recent view to open its options. Long-press a book in a Title or Author view to collapse to the group list, then tap a group to expand it. Swipe a row sideways to reveal a delete button. Tap the refresh icon in the header to rebuild the index.
+On a touch device, tap tabs, books, and the Search icon directly. Tap the active tab again to reverse its sort direction. Swipe up or down to scroll. Long-press a book to open its options; after **Group by letter**, tap a group to expand it. Swipe a row sideways to reveal a delete button. Tap the refresh icon in the header to rebuild the index.
 
-The index is created automatically the first time the Library is opened, and it is rebuilt after books are added through file transfer. To pick up other file changes or updated metadata, choose **Refresh Library** from a Recent book's options, or tap the refresh icon on a touch device. **Settings → Library → Refresh Library** does the same from any device, including when the Library shows no books. The **Use Book Metadata** setting controls whether the index reads titles and authors stored inside books.
+The index is created automatically the first time the Library is opened, and it is rebuilt after books are added through file transfer. To pick up other file changes or updated metadata, choose **Refresh Library** from any book's options, or tap the refresh icon on a touch device. **Settings → Library → Refresh Library** does the same from any device, including when the Library shows no books. The **Use Book Metadata** setting controls whether the index reads titles and authors stored inside books.
 
-**Show Covers in Library** (Settings → Library) replaces the list of names with a shelf of cover art, three covers to a row, with the title under each one. Every tab keeps its order, but the shelf does not draw the letter, author, or folder headings that the list view shows. The first time you open each page of the shelf, the reader pauses for a moment while it builds the covers. After that it reads them from the cache. This option needs a device with PSRAM and is not shown on devices without one.
+**Show Covers in Library** (Settings → Library) replaces the list of names with a shelf of cover art, four covers to a page, two to a row, with the title under each one. Every tab keeps its order, but the shelf does not draw the letter headings that the list view shows. The first time you open each page of the shelf, the reader pauses for a moment while it builds the covers. After that it reads them from the cache. This option needs a device with PSRAM and is not shown on devices without one.
 
 ### 3.5 File Transfer Screen
 
@@ -268,12 +270,14 @@ Settings are grouped into **System**, **Display**, **Reader**, **Controls**, **L
   - "Lyra Extended" - Lyra, but displays 3 books instead of 1 on the **[Home Screen](#31-home-screen)**
   - "RoundedRaff" - A rounded theme with additional visual styling
   - "Cover Grid" - The current book's cover above a grid of other recent books
-  - "Goals Home" - Your reading goals above the current book's cover
+  - "GoodTheme" - Your reading goals above the current book's cover
   
-  **Cover Grid** and **Goals Home** both show the menu as a row of icons under
+  **Cover Grid** and **GoodTheme** both show the menu as a row of icons under
   the cover, and appear only on devices with PSRAM. The icons are in the same
   order as the Lyra menu: Browse Files, Library, Statistics, Plugins or OPDS
-  when set up, File Transfer, Settings.
+  when set up, File Transfer, Settings. When the home shows only one cover, as
+  GoodTheme does, the side buttons also walk this row. A cover carries a
+  **To read**, **Read** or **Rereading** tag when one applies.
 
 - **UI Font**: Choose the font used for menus, library titles, and other interface text. See [Menu Fonts](docs/sd-card-fonts.md#menu-fonts) for supported files and sizes.
 
@@ -380,9 +384,11 @@ Side buttons, and Taps and gestures where supported by the device. See the
 
 - **Use book metadata**: Read the title and author stored inside each book when the Library index is rebuilt. When disabled or unavailable, the Library uses the filename.
 
-- **Reading Goals**: Set your own reading targets. Each row steps through a list of values and then back to **Off**, so you can turn a goal off by pressing through to the end of its list. You can set minutes a day, minutes a week, a number of days in a row to keep, and books finished this calendar year. A book counts once per year: finishing it again in a later year counts again for that year, but reading it twice in one year counts once. Goals do not measure anything new. They use the same figures as the Statistics screen, so a goal you set today already counts the reading already recorded. Progress appears on the **Goals Home** theme and, for the daily goal, on the **Stats + Wallpaper** sleep screen. Because every goal is measured against a date, they only count once the clock has been set.
+- **Reading Goals**: Set your own reading targets. Each row steps through a list of values and then back to **Off**, so you can turn a goal off by pressing through to the end of its list. You can set minutes a day, minutes a week, a number of days in a row to keep, and books finished this calendar year (from 1 up). A book counts once per year: finishing it again in a later year counts again for that year, but reading it twice in one year counts once. Goals do not measure anything new. They use the same figures as the Statistics screen, so a goal you set today already counts the reading already recorded. Progress appears on the **GoodTheme** theme and, for the daily goal, on the **Stats + Wallpaper** sleep screen. Because every goal is measured against a date, they only count once the clock has been set.
 
-- **Profiles**: Keep more than one reader on one device. Each profile has its own reading positions, statistics, goals, recent books, finished books, awards, bookmarks and clippings, and its own reading preferences — font, margins, line height and theme. Wi-Fi, plugins, the library index and the catalogue servers stay shared. The device starts with a single profile and nothing changes until you add a second one; the first profile keeps using the files it always had, so nothing is moved. Deleting a profile deletes its data, and asks first.
+- **Statistics → Years**: One review per year: reading time, books finished, days read, longest streak, best month and the books themselves. Each year is shown against the yearly book goal it had, which is recorded when you change the goal or open Statistics; years from before this was recorded show `--`. Reading time is kept for the last two years only, so older years show their books but not their time.
+
+- **Profiles**: Keep more than one reader on one device. Each profile has its own reading positions, statistics, goals, recent books, finished books, reading queue, yearly goal history, awards, bookmarks and clippings, and its own reading preferences — font, margins, line height and theme. Wi-Fi, plugins, the library index and the catalogue servers stay shared. The device starts with a single profile and nothing changes until you add a second one; the first profile keeps using the files it always had, so nothing is moved. Deleting a profile deletes its data, and asks first.
 
 - **Refresh Library** (**Settings → Library**): Rescan the SD card for books while preserving the arrival history of books already in the index.
 

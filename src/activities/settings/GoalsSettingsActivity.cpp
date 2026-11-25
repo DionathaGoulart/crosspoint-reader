@@ -11,6 +11,7 @@
 #include "stats/Goals.h"
 #include "stats/StatsText.h"
 #include "stats/StatsView.h"
+#include "stats/YearGoalsStore.h"
 
 namespace fui = freeink::ui;
 
@@ -36,7 +37,7 @@ const StrId menuNames[GoalsSettingsActivity::ITEM_COUNT] = {
 constexpr uint16_t dailyMinutes[] = {0, 10, 15, 20, 30, 45, 60, 90, 120};
 constexpr uint16_t weeklyMinutes[] = {0, 60, 120, 180, 240, 300, 420, 600, 840};
 constexpr uint16_t streakDays[] = {0, 3, 7, 14, 30, 60, 100, 365, 730};
-constexpr uint16_t booksPerYear[] = {0, 6, 12, 24, 36, 52, 100};
+constexpr uint16_t booksPerYear[] = {0, 1, 2, 3, 4, 5, 6, 8, 10, 12, 15, 20, 24, 30, 36, 52, 100};
 
 static_assert(dailyMinutes[std::size(dailyMinutes) - 1] <= CrossPointSettings::GOAL_MAX_DAILY_MINUTES);
 static_assert(weeklyMinutes[std::size(weeklyMinutes) - 1] <= CrossPointSettings::GOAL_MAX_WEEKLY_MINUTES);
@@ -68,6 +69,14 @@ void GoalsSettingsActivity::onEnter() {
     rowItems_[i].label = I18N.get(menuNames[i]);
     rowItems_[i].actionValue = static_cast<int16_t>(i);
   }
+}
+
+void GoalsSettingsActivity::onExit() {
+  // Once on the way out, not per press: cycling the presets would otherwise
+  // write the file once for every value passed. The retrospective judges each
+  // year by the goal it had.
+  YEAR_GOALS.recordCurrent(SETTINGS.goalBooksPerYear);
+  UiListActivity::onExit();
 }
 
 const char* GoalsSettingsActivity::headerTitle() const { return tr(STR_GOALS); }

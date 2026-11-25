@@ -11,6 +11,7 @@
 #include "components/bars/tab-bar.h"
 #include "components/media/book-card.h"
 #include "components/media/cover-grid.h"
+#include "stats/ShelfStatus.h"
 #include "stats/StatsView.h"
 
 class CoverGridHomeUi final : public UiAppHost {
@@ -66,6 +67,9 @@ class CoverGridHomeUi final : public UiAppHost {
   GfxRenderer& renderer;
   const std::vector<RecentBook>* books = nullptr;
   std::array<std::string, MAX_BOOKS> coverPaths;
+  // Shelf-status tag per cover, read once in begin().
+  std::array<shelfstatus::Tag, MAX_BOOKS> coverTags{};
+  freeink::ui::TextStyle tagText{};
   int thumbHeight = 0;
   bool thumbHeightChanged = false;
   int selected = 0;

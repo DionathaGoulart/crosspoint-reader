@@ -398,10 +398,13 @@ void HomeActivity::loop() {
       selectorIndex = base + idx;
       requestUpdate();
     };
+    // With one cover (the goals home, or a single book) the cover band has
+    // nowhere to go, so the side buttons walk the whole row: cover, then tabs.
+    const int sideCount = bookCount <= 1 ? menuCount : bookCount;
     buttonNavigator.onPressAndContinuous({MappedInputManager::Button::Up},
-                                         [&cycleBand, bookCount] { cycleBand(0, bookCount, -1); });
+                                         [&cycleBand, sideCount] { cycleBand(0, sideCount, -1); });
     buttonNavigator.onPressAndContinuous({MappedInputManager::Button::Down},
-                                         [&cycleBand, bookCount] { cycleBand(0, bookCount, +1); });
+                                         [&cycleBand, sideCount] { cycleBand(0, sideCount, +1); });
     buttonNavigator.onPressAndContinuous({MappedInputManager::Button::Left}, [this, &cycleBand] {
       const int bookCount = static_cast<int>(recentBooks.size());
       cycleBand(bookCount, getMenuItemCount() - bookCount, -1);

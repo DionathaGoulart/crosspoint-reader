@@ -21,6 +21,10 @@ bool PersistableStoreBase::readDocForProfile(const char* fileName, const bool pe
   return readDocFromFile(profilePath::resolve(fileName, perProfile).c_str(), doc);
 }
 
+bool PersistableStoreBase::profileFileExists(const char* fileName, const bool perProfile) {
+  return Storage.exists(profilePath::resolve(fileName, perProfile).c_str());
+}
+
 bool PersistableStoreBase::writeDocToFile(const char* path, const JsonDocument& doc) {
   Storage.mkdir("/.crosspoint");
   String json;

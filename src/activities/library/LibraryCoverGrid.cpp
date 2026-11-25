@@ -6,6 +6,7 @@
 
 #include <algorithm>
 
+#include "components/CoverTag.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
 #include "util/BookThumbnail.h"
@@ -14,8 +15,15 @@ namespace fui = freeink::ui;
 
 namespace {
 constexpr int16_t CELL_GAP = 8;
-constexpr int16_t LABEL_GAP = 2;
+constexpr int16_t LABEL_GAP = 4;
 constexpr uint8_t LABEL_LINES = 2;
+constexpr int16_t FRAME_GAP = 4;
+constexpr int16_t FRAME_WIDTH = 4;
+// Room the selection frame takes around a cover. Reserved inside each cell so
+// the frame never runs into the title above it or the tab bar.
+constexpr int16_t FRAME_EXTENT = FRAME_GAP + FRAME_WIDTH;
+// Between rows: the frame of one row must clear the title of the row above.
+constexpr int16_t ROW_GAP = 12;
 }  // namespace
 
 void LibraryCoverGrid::invalidate() {
@@ -32,16 +40,14 @@ int LibraryCoverGrid::thumbHeightFor(const fui::Rect body) const {
   // Bounded by the column width at the 2:3 cover aspect and by the row height,
   // both measured from the rect the grid is actually given: screen metrics do
   // not know what the tab strip and the footer already took.
-  const int columnWidth = std::max(1, (body.width - CELL_GAP * (COLUMNS + 1)) / COLUMNS);
-  const int byWidth = columnWidth * 3 / 2;
-  const int labelHeight = renderer.getLineHeight(SMALL_FONT_ID) * LABEL_LINES + LABEL_GAP;
-  const int rowsWanted = 3;
-  const int rowHeight = std::max(1, (body.height - CELL_GAP * (rowsWanted - 1)) / rowsWanted);
-  return std::max(1, std::min(byWidth, rowHeight - labelHeight));
+  const int columnWidth = std::max(1, (body.width - CELL_GAP * (COLUMNS - 1)) / COLUMNS);
+  const int byWidth = (columnWidth - FRAME_EXTENT * 2) * 3 / 2;
+  const int rowHeight = std::max(1, (body.height - ROW_GAP * (ROWS - 1)) / ROWS);
+  return std::max(1, std::min(byWidth, rowHeight - (rowHeightFor(0))));
 }
 
 int LibraryCoverGrid::rowHeightFor(const int thumbHeight) const {
-  return thumbHeight + renderer.getLineHeight(SMALL_FONT_ID) * LABEL_LINES + LABEL_GAP;
+  return FRAME_EXTENT + thumbHeight + LABEL_GAP + renderer.getLineHeight(SMALL_FONT_ID) * LABEL_LINES;
 }
 
 void LibraryCoverGrid::resolvePage(const int first, const int count, const int thumbHeight) {
@@ -69,16 +75,19 @@ void LibraryCoverGrid::resolvePage(const int first, const int count, const int t
   }
 
   if (needsGeneration) {
-    GUI.drawPopup(renderer, tr(STR_LOADING_POPUP));
+    const Rect popup = GUI.drawPopup(renderer, tr(STR_LOADING_POPUP));
     for (int i = 0; i < cells; ++i) {
       if (!missing[i]) continue;
       if (!source->coverPathFor(first + i, path)) continue;
       bookthumb::ensure(path, thumbHeight, pageCovers[static_cast<size_t>(i)]);
     }
-    // The popup published a frame of its own. The grid drawn after this paints
-    // only its cells -- with SpaceBetween columns the gutters are not touched --
-    // so without clearing, slices of the popup stay on screen beside the covers.
-    renderer.clearScreen();
+    // The popup published a frame of its own, and the grid paints only its
+    // cells, so slices of the popup would stay between the covers. Clear the
+    // popup alone: the header and the tab bar are already in the frame, and
+    // clearing the whole screen here left the screen without them.
+    constexpr int kPopupBleed = 6;
+    renderer.fillRect(popup.x - kPopupBleed, popup.y - kPopupBleed, popup.width + kPopupBleed * 2,
+                      popup.height + kPopupBleed * 2, false);
   }
 
   windowFirst = first;
@@ -95,15 +104,19 @@ fui::CoverGridItem LibraryCoverGrid::provideItem(const uint16_t index, void* use
   return fui::coverGridItem(self->labelScratch.c_str(), index);
 }
 
-bool LibraryCoverGrid::paintCover(fui::DrawTarget&, const fui::Rect cover, const fui::CoverGridItem&,
+bool LibraryCoverGrid::paintCover(fui::DrawTarget& target, const fui::Rect cover, const fui::CoverGridItem&,
                                   const uint16_t index, void* user) {
   auto* self = static_cast<LibraryCoverGrid*>(user);
   const int slot = static_cast<int>(index) - self->windowFirst;
   if (!self->coverCache || slot < 0 || slot >= static_cast<int>(self->pageCovers.size())) return false;
   const std::string& coverBmp = self->pageCovers[static_cast<size_t>(slot)];
   if (coverBmp.empty()) return false;
-  return self->coverCache->paint(cover, static_cast<size_t>(slot),
-                                 UITheme::getCoverThumbPath(coverBmp, self->windowThumbHeight));
+  if (!self->coverCache->paint(cover, static_cast<size_t>(slot),
+                               UITheme::getCoverThumbPath(coverBmp, self->windowThumbHeight))) {
+    return false;
+  }
+  if (self->source) drawCoverTag(target, cover, self->source->coverTagFor(static_cast<int>(index)), self->tagText);
+  return true;
 }
 
 int LibraryCoverGrid::build(UiAppHost::UiScreen& screen, const fui::Rect body, const int selectedEntry,
@@ -129,7 +142,7 @@ int LibraryCoverGrid::build(UiAppHost::UiScreen& screen, const fui::Rect body, c
   // Capped at the cover cache's slot count: a body tall enough for a fourth row
   // would hand paintCover() slots it cannot snapshot, and those cells would
   // silently fall back to placeholder art.
-  pageItems = std::min<uint16_t>(fui::coverGridVisibleCells(body, COLUMNS, rowHeight, CELL_GAP),
+  pageItems = std::min<uint16_t>(fui::coverGridVisibleCells(body, COLUMNS, rowHeight, ROW_GAP),
                                  static_cast<uint16_t>(HomeCoverCache::MAX_COVERS));
   if (pageItems == 0) return 0;
   const uint16_t topIndex = fui::coverGridTopIndexFor(static_cast<uint16_t>(hasSelection ? selectedEntry : 0),
@@ -144,21 +157,26 @@ int LibraryCoverGrid::build(UiAppHost::UiScreen& screen, const fui::Rect body, c
   grid.action = rowAction;
   grid.inputMask = fui::InputTouch | fui::InputLongPress;
   grid.columns = COLUMNS;
-  grid.columnLayout = fui::CoverGridColumnLayout::SpaceBetween;
+  // Each cover centred in its half, with its title under it at the full
+  // column width.
+  grid.columnLayout = fui::CoverGridColumnLayout::EqualWidth;
   grid.selectionIndicator = fui::CoverGridSelectionIndicator::CoverFrame;
-  grid.selectedCoverFrameGap = 4;
-  grid.selectedCoverFrameWidth = 6;
+  grid.selectedCoverFrameGap = FRAME_GAP;
+  grid.selectedCoverFrameWidth = FRAME_WIDTH;
+  grid.cellInset = fui::Insets{FRAME_EXTENT, 0, 0, 0};
   grid.coverSize.height = static_cast<int16_t>(thumbHeight);
   grid.coverSize.width = static_cast<int16_t>(thumbHeight * 2 / 3);
   grid.rowHeight = rowHeight;
-  grid.gap = grid.rowGap = CELL_GAP;
+  grid.gap = CELL_GAP;
+  grid.rowGap = ROW_GAP;
   // The title is what makes a wall of art navigable, and the only thing a book
   // whose cover failed to generate has left.
   grid.labelHeight = static_cast<int16_t>(renderer.getLineHeight(SMALL_FONT_ID) * LABEL_LINES);
   grid.labelGap = LABEL_GAP;
   grid.titleText = screen.theme().smallText;
   grid.titleText.maxLines = LABEL_LINES;
-  grid.labelFollowsCover = true;
+  grid.labelInset = fui::Insets{0, 4, 0, 4};
+  tagText = screen.theme().smallText;
   grid.cellStyles = screen.theme().listRow;
   grid.itemProviderUserData = this;
   grid.itemProvider = &LibraryCoverGrid::provideItem;

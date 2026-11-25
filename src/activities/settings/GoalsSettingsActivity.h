@@ -18,6 +18,7 @@ class GoalsSettingsActivity final : public UiListActivity {
   static constexpr int ITEM_COUNT = 4;
 
   void onEnter() override;
+  void onExit() override;
 
  private:
   int listCount() const override { return ITEM_COUNT; }

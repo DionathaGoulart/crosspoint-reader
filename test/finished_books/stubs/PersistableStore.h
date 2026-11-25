@@ -24,6 +24,9 @@ struct PersistableStoreBase {
     if (found == fake::files.end()) return false;
     return !deserializeJson(doc, std::string(found->second->bytes.begin(), found->second->bytes.end()));
   }
+  static bool profileFileExists(const char* fileName, bool /*perProfile*/) {
+    return fake::files.find(fileName) != fake::files.end();
+  }
 };
 
 template <typename T>

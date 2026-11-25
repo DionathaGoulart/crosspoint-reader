@@ -9,6 +9,8 @@
 #include "profiles/ProfileStore.h"
 #include "stats/AchievementStore.h"
 #include "stats/FinishedBooksStore.h"
+#include "stats/ReadingQueueStore.h"
+#include "stats/YearGoalsStore.h"
 
 namespace profiles {
 
@@ -33,6 +35,8 @@ bool switchTo(const uint8_t id) {
   // "keep what is in memory" and a blanket clear would drop device settings.
   RECENT_BOOKS.reset();
   FINISHED_BOOKS.reset();
+  READING_QUEUE.reset();
+  YEAR_GOALS.reset();
   ACHIEVEMENTS.reset();
 
   // Settings first: the theme is one of the reader's own preferences, and

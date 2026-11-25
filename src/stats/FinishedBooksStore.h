@@ -51,6 +51,7 @@ class FinishedBooksStore : public PersistableStore<FinishedBooksStore> {
 
  private:
   std::vector<FinishedBook> books;
+  bool loaded = false;
 
   FinishedBooksStore() = default;
   ~FinishedBooksStore() = default;
@@ -74,7 +75,16 @@ class FinishedBooksStore : public PersistableStore<FinishedBooksStore> {
 
   // Forgets everything held in memory, without touching the card. See
   // RecentBooksStore::reset() for why profiles::switchTo() needs this.
-  void reset() { books.clear(); }
+  void reset() {
+    // swap, not clear(): clear() keeps the record array allocated.
+    std::vector<FinishedBook>().swap(books);
+    loaded = false;
+  }
+  // Loads from the card the first time it is asked for. Nothing loads this
+  // store at boot, and a save before the first load would replace the file
+  // with only the book being saved.
+  void ensureLoaded();
+  bool isLoaded() const { return loaded; }
 
   bool contains(const std::string& document) const;
   const FinishedBook* find(const std::string& document) const;

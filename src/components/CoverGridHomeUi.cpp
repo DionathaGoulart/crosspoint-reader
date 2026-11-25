@@ -8,6 +8,7 @@
 #include <cstdio>
 #include <utility>
 
+#include "CoverTag.h"
 #include "MappedInputManager.h"
 #include "UITheme.h"
 #include "icons/blocks.h"
@@ -17,7 +18,9 @@
 #include "icons/recent.h"
 #include "icons/settings2.h"
 #include "icons/transfer.h"
+#include "stats/FinishedBooksStore.h"
 #include "stats/GoalsSettings.h"
+#include "stats/ReadingQueueStore.h"
 #include "stats/StatsService.h"
 #include "util/BookProgress.h"
 
@@ -54,6 +57,18 @@ void CoverGridHomeUi::begin(const std::vector<RecentBook>& recent, const SlotTab
     // this screen never reads.
     summary = statsService::summaryOnly();
   }
+
+  // The tags need the finished-books store. The goals home keeps it loaded for
+  // its summary anyway; the grid home lets it go again, so up to 500 records
+  // are not held through the reader just to label seven covers.
+  const bool finishedWasLoaded = FINISHED_BOOKS.isLoaded();
+  FINISHED_BOOKS.ensureLoaded();
+  READING_QUEUE.ensureLoaded();
+  const bool storesReady = FINISHED_BOOKS.isLoaded();
+  for (size_t i = 0; i < coverTags.size(); ++i) {
+    coverTags[i] = storesReady && i < recent.size() ? shelfstatus::forPath(recent[i].path) : shelfstatus::Tag::None;
+  }
+  if (!finishedWasLoaded && !goalsMode) FINISHED_BOOKS.reset();
 }
 
 void CoverGridHomeUi::refreshCoverPaths() {
@@ -102,6 +117,7 @@ void CoverGridHomeUi::screenFn(UiScreen& screen, void* user) { static_cast<Cover
 void CoverGridHomeUi::draw(UiScreen& screen) {
   coverCache.prepare();
   const auto& theme = screen.theme();
+  tagText = theme.smallText;
   const auto safe = UITheme::getInstance().getScreenSafeArea(renderer, true);
   // Sides clear the rounded corners like the header, so the grid lines up under it.
   const int corner = BoardConfig::ACTIVE.cornerRadius;
@@ -458,5 +474,6 @@ bool CoverGridHomeUi::paintFramedCover(fui::DrawTarget& target, fui::Rect rect, 
   // The false spine draws inside the cover paint (HomeCoverCache), glued to
   // the art's left edge, so it stays aligned whatever each cover's margin is.
   const bool drawn = index < coverPaths.size() && coverCache.paint(rect, index, coverPaths[index]);
+  if (drawn && index < coverTags.size()) drawCoverTag(target, rect, shelfstatus::label(coverTags[index]), tagText);
   return drawn;
 }

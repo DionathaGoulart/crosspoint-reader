@@ -46,6 +46,7 @@ bool FinishedBooksStore::fromJson(JsonVariantConst doc) {
   // an error: the only fatal case is a JSON parse failure, which the caller
   // already handled. A null JsonArray iterates zero times.
   books.clear();
+  loaded = true;
   JsonArrayConst arr = doc["books"].as<JsonArrayConst>();
   books.reserve(std::min(arr.size(), MAX_BOOKS));
   for (JsonObjectConst obj : arr) {
@@ -74,6 +75,13 @@ bool FinishedBooksStore::fromJson(JsonVariantConst doc) {
   }
   LOG_DBG("FBS", "Finished books loaded (%u entries)", static_cast<unsigned>(books.size()));
   return true;
+}
+
+void FinishedBooksStore::ensureLoaded() {
+  if (loaded || loadFromFile()) return;  // fromJson() sets `loaded`
+  // No file yet is an empty store. A file that could not be read or parsed
+  // leaves the store unloaded, so no save replaces it with a partial list.
+  loaded = !profileFileExists(getFilePath(), kPerProfile);
 }
 
 bool FinishedBooksStore::contains(const std::string& document) const {
@@ -122,6 +130,8 @@ FinishedBook* FinishedBooksStore::entryFor(const std::string& document, const st
 
 bool FinishedBooksStore::markRead(const std::string& document, const std::string& path, const std::string& title,
                                   const std::string& author, const std::string& language, const int64_t epoch) {
+  ensureLoaded();
+  if (!loaded) return false;
   FinishedBook* book = entryFor(document, path, title, author, language);
   if (book == nullptr) return false;
 
@@ -146,6 +156,8 @@ bool FinishedBooksStore::markRead(const std::string& document, const std::string
 
 bool FinishedBooksStore::setRereading(const std::string& document, const std::string& path, const std::string& title,
                                       const std::string& author, const std::string& language, const bool rereading) {
+  ensureLoaded();
+  if (!loaded) return false;
   FinishedBook* book = entryFor(document, path, title, author, language);
   if (book == nullptr) return false;
   book->rereading = rereading;
@@ -155,6 +167,8 @@ bool FinishedBooksStore::setRereading(const std::string& document, const std::st
 bool FinishedBooksStore::setRating(const std::string& document, const std::string& path, const std::string& title,
                                    const std::string& author, const std::string& language, const int8_t rating) {
   if (rating < -1 || rating > 1) return false;
+  ensureLoaded();
+  if (!loaded) return false;
   FinishedBook* book = entryFor(document, path, title, author, language);
   if (book == nullptr) return false;
   book->rating = rating;

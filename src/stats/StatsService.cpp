@@ -31,7 +31,9 @@ namespace {
 // rules -- finishedCount() rather than size(), and the yearly goal count --
 // are stated once and cannot drift apart.
 stats::Summary summarizeWith(const stats::StatsAggregate& aggregate, const int64_t now, const int tz) {
-  FINISHED_BOOKS.loadFromFile();
+  // Once per boot or profile: every change to the store saves, so the copy in
+  // memory is the file. The goals home asks for this on every entry.
+  FINISHED_BOOKS.ensureLoaded();
   // finishedCount(), not size(): an entry can exist for a rating on a book that
   // was never read, and counting those inflates the yearly goal and the awards.
   const auto finishedCount = static_cast<uint32_t>(FINISHED_BOOKS.finishedCount());

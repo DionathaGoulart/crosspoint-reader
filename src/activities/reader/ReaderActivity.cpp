@@ -21,6 +21,7 @@
 #include "XtcReaderActivity.h"
 #include "activities/RenderLock.h"
 #include "stats/FinishedBooksStore.h"
+#include "stats/ReadingQueueStore.h"
 #include "sync/ReadingSessionLog.h"
 #include "util/PluginEvents.h"
 
@@ -152,7 +153,10 @@ void ReaderActivity::recordFinishedIfAtEnd(const bool atEnd) {
   // finished books must not depend on a setting. markRead() keeps the first
   // date, and counts another reading only when a reread was asked for, so
   // paging to the end of an old favourite costs one no-op save.
-  finishedbooks::recordFinished(bookPath, getBookTitle(), getBookAuthor(), getBookLanguage());
+  // A finished book leaves the "to read" list; it is on the Read shelf now.
+  if (finishedbooks::recordFinished(bookPath, getBookTitle(), getBookAuthor(), getBookLanguage())) {
+    READING_QUEUE.remove(bookPath);
+  }
   finishedRecorded = true;
 }
 

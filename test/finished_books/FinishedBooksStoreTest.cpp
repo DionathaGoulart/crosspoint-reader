@@ -60,9 +60,7 @@ bool read(const char* doc, int64_t at) {
   return FINISHED_BOOKS.markRead(doc, "/book.epub", "Title", "Author", "pt", at);
 }
 
-bool arm(const char* doc) {
-  return FINISHED_BOOKS.setRereading(doc, "/book.epub", "Title", "Author", "pt", true);
-}
+bool arm(const char* doc) { return FINISHED_BOOKS.setRereading(doc, "/book.epub", "Title", "Author", "pt", true); }
 
 void aRereadInALaterYearCountsForThatYear() {
   begin();
@@ -193,6 +191,25 @@ void resetIsNotUndoneByLoadingAProfileThatHasNoFileYet() {
 
 }  // namespace
 
+// A file that cannot be parsed must survive the next finish: the store stays
+// unloaded and refuses to save, instead of writing a one-book list over it.
+void anUnreadableFileIsNotSavedOver() {
+  begin();
+  const std::string broken = "{\"books\": [ not json";
+  fake::add(FinishedBooksStore::getFilePath(), broken);
+  CHECK(!read("a", FIRST_READ_2025));
+  const auto file = fake::files.find(FinishedBooksStore::getFilePath());
+  CHECK(file != fake::files.end());
+  CHECK(std::string(file->second->bytes.begin(), file->second->bytes.end()) == broken);
+}
+
+// No file yet is an empty store, and the first finish creates it.
+void aMissingFileStartsEmpty() {
+  begin();
+  CHECK(read("a", FIRST_READ_2025));
+  CHECK(fake::files.find(FinishedBooksStore::getFilePath()) != fake::files.end());
+}
+
 int main() {
   aRereadInALaterYearCountsForThatYear();
   twoReadingsInOneYearCountOnce();
@@ -204,6 +221,8 @@ int main() {
   anEntryWrittenBeforeTheReadsFieldIsOneReading();
   readsIsWrittenEvenAtZeroSoARatingStaysARating();
   resetIsNotUndoneByLoadingAProfileThatHasNoFileYet();
+  anUnreadableFileIsNotSavedOver();
+  aMissingFileStartsEmpty();
 
   if (failures == 0) {
     std::printf("ok finished_books  all checks passed\n");

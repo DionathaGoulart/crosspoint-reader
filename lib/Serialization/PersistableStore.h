@@ -62,6 +62,10 @@ class PersistableStoreBase {
   // every store: a per-store copy is what this abstraction exists to avoid.
   static bool writeDocForProfile(const char* fileName, bool perProfile, const JsonDocument& doc);
   static bool readDocForProfile(const char* fileName, bool perProfile, JsonDocument& doc);
+  // Whether the store's file exists for the active profile. A lazy loader uses
+  // it to tell "no file yet" (an empty store) from "file unreadable" (which
+  // must not be saved over).
+  static bool profileFileExists(const char* fileName, bool perProfile);
 
  protected:
   /**

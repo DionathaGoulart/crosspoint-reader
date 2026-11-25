@@ -33,9 +33,14 @@ class LibraryCoverGrid {
     virtual bool coverPathFor(int entry, std::string& out) = 0;
     // The text drawn under the cover.
     virtual bool coverLabelFor(int entry, std::string& out) = 0;
+    // A short status drawn on the cover ("Rereading"), or nullptr.
+    virtual const char* coverTagFor(int) { return nullptr; }
   };
 
-  static constexpr uint8_t COLUMNS = 3;
+  // Two by two: covers large enough to recognise, and titles wide enough to
+  // read in two lines.
+  static constexpr uint8_t COLUMNS = 2;
+  static constexpr uint8_t ROWS = 2;
   // A page never exceeds the cover cache's slots; build() caps it there.
   static constexpr uint8_t kMaxPageCells = HomeCoverCache::MAX_COVERS;
 
@@ -80,4 +85,6 @@ class LibraryCoverGrid {
   uint16_t pageItems = 0;
   // Scratch for the item provider: the label it returns must outlive the call.
   std::string labelScratch;
+  // Style for the cover tags, taken from the screen theme in build().
+  freeink::ui::TextStyle tagText{};
 };
