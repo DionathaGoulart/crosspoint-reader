@@ -241,10 +241,12 @@ void LibraryListActivity::refreshOverlap() {
 
 void LibraryListActivity::openSelectedBook() {
   std::string path;
+  std::string title;
   if (selectedEntry() < pinnedCount()) {
     const RecentBook* book = storeBook(selectedEntry());
     if (!book) return;
     path = book->path;
+    title = book->title;
   } else {
     if (!index.isOpen()) return;
     const uint16_t ordinal = index.ordinalForRow(sortOrder, static_cast<uint16_t>(rowFor(selectedEntry())));
@@ -256,7 +258,26 @@ void LibraryListActivity::openSelectedBook() {
       return;
     }
   }
-  openBookByPath(path);
+
+  // A book already read opens at its last page, and opening it does not count
+  // as another reading. Ask which one is meant, so a reread is a choice made
+  // here and not only through the options menu. Open is first, so a stray
+  // press never discards the saved place.
+  if (tagForHash(library::clixPathHash(path.data(), path.size())) != shelfstatus::Tag::Read) {
+    openBookByPath(path);
+    return;
+  }
+  if (title.empty() && selectedEntry() >= pinnedCount() && !rowTextFor(selectedEntry(), title, nullptr)) title.clear();
+  const char* options[] = {tr(STR_OPEN), tr(STR_BOOK_REREAD)};
+  app.clearTapFlash();
+  optionPopup.show(tr(STR_LIBRARY), title.c_str(), options, 2, 0, [this, path, title](const int choice) {
+    swallowHeldReleases();
+    if (choice == 0) {
+      openBookByPath(path);
+    } else if (choice == 1) {
+      startReread(path, title);
+    }
+  });
 }
 
 // Shared by row activation and the options menu: the reader screen this opens
@@ -1316,6 +1337,10 @@ void LibraryListActivity::buildScreen(UiScreen& screen) {
     auto& nav = activeNav();
     const auto body = screen.body();
     nav.top = coverGrid.build(screen, body, selectedEntry(), ACTION_ROW);
+    // The loading popup was drawn over the header and tabs. Another pass clears
+    // the screen and paints everything again; the covers are cached by then, so
+    // it shows no popup.
+    if (coverGrid.takePopupShown()) nav.rebuildNeeded = true;
     // screen.list() is what normally fills these, and the shelf never calls it.
     // Without them pageRows() is 1, so holding Next steps one cover instead of
     // a page -- the one thing a 4,000-book shelf needs.

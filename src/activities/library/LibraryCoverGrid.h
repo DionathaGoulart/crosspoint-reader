@@ -62,6 +62,14 @@ class LibraryCoverGrid {
   // screen so the caller can keep its own viewport in step.
   int build(UiAppHost::UiScreen& screen, freeink::ui::Rect body, int selectedEntry, freeink::ui::ActionId rowAction);
 
+  // True once after a build() that drew the loading popup, which leaves its
+  // pixels in the frame. The caller repaints the whole screen when it is set.
+  bool takePopupShown() {
+    const bool shown = popupShown;
+    popupShown = false;
+    return shown;
+  }
+
  private:
   int thumbHeightFor(freeink::ui::Rect body) const;
   int rowHeightFor(int thumbHeight) const;
@@ -74,6 +82,7 @@ class LibraryCoverGrid {
 
   GfxRenderer& renderer;
   Source* source = nullptr;
+  bool popupShown = false;
   // Allocated on first use: the PSRAM buffer costs nothing until the reader
   // actually opens this view.
   std::unique_ptr<HomeCoverCache> coverCache;

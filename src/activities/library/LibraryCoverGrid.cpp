@@ -75,19 +75,13 @@ void LibraryCoverGrid::resolvePage(const int first, const int count, const int t
   }
 
   if (needsGeneration) {
-    const Rect popup = GUI.drawPopup(renderer, tr(STR_LOADING_POPUP));
+    GUI.drawPopup(renderer, tr(STR_LOADING_POPUP));
+    popupShown = true;
     for (int i = 0; i < cells; ++i) {
       if (!missing[i]) continue;
       if (!source->coverPathFor(first + i, path)) continue;
       bookthumb::ensure(path, thumbHeight, pageCovers[static_cast<size_t>(i)]);
     }
-    // The popup published a frame of its own, and the grid paints only its
-    // cells, so slices of the popup would stay between the covers. Clear the
-    // popup alone: the header and the tab bar are already in the frame, and
-    // clearing the whole screen here left the screen without them.
-    constexpr int kPopupBleed = 6;
-    renderer.fillRect(popup.x - kPopupBleed, popup.y - kPopupBleed, popup.width + kPopupBleed * 2,
-                      popup.height + kPopupBleed * 2, false);
   }
 
   windowFirst = first;

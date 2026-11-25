@@ -142,10 +142,10 @@ Books in the queue or being reread carry a small **To read** or **Rereading** ta
 On a button-only device:
 
 - Use **Up/Down** or **Left/Right** to move one row at a time. Hold a direction to move a page at a time.
-- Press **Confirm** to open the selected book.
+- Press **Confirm** to open the selected book. On a book you have finished, a popup asks **Open** (the default, back at the last page) or **Read again**.
 - Press **Back** from the book list to focus the tabs. While the tabs are focused, press **Confirm** to switch to the next tab, hold **Confirm** to reverse the sort direction, press **Up** to open Search, or press **Down** to return to the list.
 - Hold **Confirm** on a book to open its options: **Open**, **Add to reading queue** or **Remove from queue**, **Read again** (books you have finished), **Like** and **Dislike**, **Group by letter** (Name tab), **Remove from Recents** (opened books only), **Delete**, and **Refresh Library**.
-- **Read again** returns the book to its first page and is what makes the next finish count as another reading. Without it, paging to the end of a book you have already finished changes nothing — so you can reread a passage of an old favourite without it counting.
+- **Read again** (from this popup or the options menu) returns the book to its first page and is what makes the next finish count as another reading. Without it, paging to the end of a book you have already finished changes nothing — so you can reread a passage of an old favourite without it counting.
 - On the Name tab, **Group by letter** collapses the list to its letter groups. The matching group remains selected. Press **Confirm** to enter a group, or **Back** to restore the exact book and position you came from.
 - Press **Back** to clear an active search.
 
