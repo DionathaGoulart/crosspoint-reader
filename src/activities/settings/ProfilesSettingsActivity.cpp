@@ -47,7 +47,15 @@ void ProfilesSettingsActivity::rebuildRows() {
     // An empty name is the default profile, which is named in the reader's
     // language rather than carrying an English word on the card.
     rowLabels_.push_back(profile.name.empty() ? tr(STR_PROFILE_DEFAULT) : profile.name);
-    rowSubtitles_.push_back(profile.id == PROFILES.activeId() ? tr(STR_PROFILE_IN_USE) : std::string());
+    // A profile's own folder holds its files, including its sleep images (see
+    // util/SleepImagePaths.h), so it is shown for anyone who needs to put images there.
+    std::string subtitle = profile.id == PROFILES.activeId() ? tr(STR_PROFILE_IN_USE) : std::string();
+    if (profile.id != profilePath::DEFAULT_ID) {
+      std::string folder = profilePath::dirFor(profile.id);
+      folder.pop_back();  // the trailing '/'
+      subtitle += subtitle.empty() ? folder : "  " + folder;
+    }
+    rowSubtitles_.push_back(std::move(subtitle));
   }
   rowLabels_.push_back(tr(STR_PROFILE_NEW));
   rowSubtitles_.push_back(std::string());

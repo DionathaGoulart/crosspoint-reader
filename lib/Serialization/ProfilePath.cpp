@@ -1,6 +1,7 @@
 #include "ProfilePath.h"
 
 #include <HalStorage.h>
+#include <strings.h>
 
 #include <atomic>
 #include <cstdio>
@@ -49,6 +50,17 @@ std::string resolve(const char* fileName, const bool perProfile) {
   if (std::strncmp(fileName, ROOT, ROOT_LENGTH) == 0) fileName += ROOT_LENGTH;
   while (*fileName == '/') ++fileName;
   return activeDir(perProfile) + fileName;
+}
+
+const char* afterProfileDir(const char* path) {
+  if (path == nullptr) return nullptr;
+  constexpr char PREFIX[] = "/.crosspoint/profiles/";
+  constexpr size_t PREFIX_LENGTH = sizeof(PREFIX) - 1;
+  if (strncasecmp(path, PREFIX, PREFIX_LENGTH) != 0) return nullptr;
+  const char* rest = path + PREFIX_LENGTH;
+  const char* digits = rest;
+  while (*rest >= '0' && *rest <= '9') ++rest;
+  return rest != digits && *rest == '/' ? rest : nullptr;
 }
 
 bool ensureActiveDir(const bool perProfile) {

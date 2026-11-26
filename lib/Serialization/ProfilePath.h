@@ -47,6 +47,12 @@ std::string activeDir(bool perProfile);
 // can observe in between.
 std::string dirFor(uint8_t id);
 
+// If `path` is inside some profile's directory ("/.crosspoint/profiles/<id>/..."),
+// the part after "<id>", starting with '/'; otherwise nullptr. Names on FAT are
+// case-insensitive, so the match is too. For callers that classify a path by its
+// name without caring which profile it belongs to.
+const char* afterProfileDir(const char* path);
+
 // Creates the active profile's directory if it is missing, one level at a time
 // because mkdir is not recursive. Call before the first write of a run; a read
 // does not need it. True when the directory exists afterwards.

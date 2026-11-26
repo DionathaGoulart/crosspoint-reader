@@ -6,7 +6,6 @@
 // what lets an existing card stay untouched, so that case is asserted as
 // carefully as the profile ones.
 #include <ProfilePath.h>
-
 #include <gtest/gtest.h>
 
 namespace {
@@ -61,6 +60,16 @@ TEST_F(ProfilePathTest, TwoDigitIdIsNotTruncated) {
 TEST_F(ProfilePathTest, NullNameIsNotDereferenced) {
   profilePath::setActiveId(1);
   EXPECT_EQ(profilePath::resolve(nullptr, true), "");
+}
+
+TEST_F(ProfilePathTest, AfterProfileDirReturnsThePathInsideAProfile) {
+  EXPECT_STREQ(profilePath::afterProfileDir("/.crosspoint/profiles/2/sleep.bmp"), "/sleep.bmp");
+  EXPECT_STREQ(profilePath::afterProfileDir("/.CrossPoint/Profiles/12/.sleep/a.bmp"), "/.sleep/a.bmp");
+  EXPECT_EQ(profilePath::afterProfileDir("/.crosspoint/profiles/x/sleep.bmp"), nullptr);
+  EXPECT_EQ(profilePath::afterProfileDir("/.crosspoint/profiles//sleep.bmp"), nullptr);
+  EXPECT_EQ(profilePath::afterProfileDir("/.crosspoint/profiles/2"), nullptr);
+  EXPECT_EQ(profilePath::afterProfileDir("/sleep.bmp"), nullptr);
+  EXPECT_EQ(profilePath::afterProfileDir(nullptr), nullptr);
 }
 
 TEST_F(ProfilePathTest, ActiveIdRoundTrips) {

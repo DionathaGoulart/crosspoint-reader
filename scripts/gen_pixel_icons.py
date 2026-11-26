@@ -8,6 +8,10 @@ Bitmap layout (see GfxRenderer::drawIcon): 1 bit per pixel, MSB first, a 0 bit
 is ink, and the stored rows are the image turned a quarter turn: display pixel
 (X, Y) is stored at row 31-X, column Y.
 
+One icon, users, is for the Settings list, which draws freeink::Icon bitmaps
+(not rotated, see freeink-sdk Icon.h). It is written into customListIcons.h,
+between the BEGIN and END marker lines.
+
 Usage: python3 scripts/gen_pixel_icons.py
 """
 from pathlib import Path
@@ -144,6 +148,36 @@ def book():
     return a
 
 
+def users():
+    """Two readers: a head and shoulders in front, a second one behind."""
+    a = Art()
+    for y in range(GRID):
+        for x in range(GRID):
+            # Front head: a ring around (6, 5).
+            d2 = (x - 5.5) ** 2 + (y - 4.5) ** 2
+            if 4.5 <= d2 <= 11:
+                a.dot(x, y)
+    # Front shoulders: an arch from x=1 to x=11, bottom at row 14.
+    a.hline(3, 9, 5)
+    a.dot(2, 10)
+    a.dot(8, 10)
+    a.vline(1, 11, 4)
+    a.vline(9, 11, 4)
+    a.hline(1, 14, 9)
+    # Back head and shoulder, cut off by the front figure.
+    for y in range(GRID):
+        for x in range(9, GRID):
+            d2 = (x - 10.5) ** 2 + (y - 4.5) ** 2
+            if 4.5 <= d2 <= 11 and x >= 11:
+                a.dot(x, y)
+    a.dot(12, 9)
+    a.dot(13, 9)
+    a.dot(14, 10)
+    a.vline(14, 11, 4)
+    a.hline(11, 14, 4)
+    return a
+
+
 ICONS = {
     "folder": ("FolderIcon", folder),
     "library": ("LibraryIcon", library),
@@ -179,11 +213,51 @@ def header(name, data):
     return "\n".join(lines) + "\n"
 
 
+BEGIN = "// BEGIN scripts/gen_pixel_icons.py"
+END = "// END scripts/gen_pixel_icons.py"
+
+
+def upright_bytes(art):
+    """freeink::Icon layout: rows top to bottom, MSB first, 0 = ink, not rotated."""
+    row_bytes = SIZE // 8
+    data = []
+    for y in range(SIZE):
+        for b in range(row_bytes):
+            value = 0xFF
+            for bit in range(8):
+                if art.px[y // SCALE][(b * 8 + bit) // SCALE]:
+                    value &= ~(0x80 >> bit)
+            data.append(value)
+    return data
+
+
+def write_custom_list_icons():
+    art = users().center()
+    data = upright_bytes(art)
+    lines = [", ".join(f"0x{b:02X}" for b in data[i:i + 19]) + "," for i in range(0, len(data), 19)]
+    block = "\n".join(
+        [BEGIN, "// users (settings list): two readers, drawn by hand",
+         "static const uint8_t icon_users_32_bits[] = {"]
+        + ["    " + line for line in lines]
+        + ["};", f"static const freeink::Icon icon_users_32 = {{{SIZE}, {SIZE}, {SIZE // 2}, icon_users_32_bits}};", END])
+    path = OUT / "customListIcons.h"
+    text = path.read_text()
+    if BEGIN in text:
+        head, rest = text.split(BEGIN, 1)
+        tail = rest.split(END, 1)[1]
+        text = head + block + tail
+    else:
+        text = text.rstrip("\n") + "\n\n" + block + "\n"
+    path.write_text(text)
+    print(f"customListIcons.h (users)\n{art.ascii()}\n")
+
+
 def main():
     for stem, (name, draw) in ICONS.items():
         art = draw().center()
         (OUT / f"{stem}.h").write_text(header(name, to_bytes(art)))
         print(f"{stem}.h\n{art.ascii()}\n")
+    write_custom_list_icons()
 
 
 if __name__ == "__main__":

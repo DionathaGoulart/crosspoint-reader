@@ -33,6 +33,7 @@ Welcome to the **CrossPoint** firmware. This guide outlines the hardware control
         - [Option B: Legacy Public KOReader Server (`sync.koreader.rocks`)](#option-b-legacy-public-koreader-server-synckoreaderrocks)
         - [Option C: Self-Hosted Server (Docker Compose)](#option-c-self-hosted-server-docker-compose)
         - [Syncing While Reading](#syncing-while-reading)
+      - [3.6.8 Profiles](#368-profiles)
     - [3.7 Sleep Screen](#37-sleep-screen)
       - [Cover settings](#cover-settings)
       - [Custom images](#custom-images)
@@ -230,7 +231,7 @@ Books cannot be removed from your device through Calibre. Use the web interface 
 
 ### 3.6 Settings
 
-Settings are grouped into **System**, **Display**, **Reader**, **Controls**, **Library**, and **Connectivity**. System contains language, the setup guide, keyboard layouts, hidden-file visibility, file-extension visibility, Clock (where available), firmware updates, and About. Library contains Use Book Metadata, Hide New Files in Recent, Clear Read Books from Recent List, Move Finished Books to Read Folder, and Refresh Library. Time to Sleep is under Display; Clear Reading Cache is under Reader. Connectivity contains Wi-Fi, Bluetooth Page Turner, CrossPoint Sync, OPDS, and the Plugins toggle. The options below describe these settings.
+Settings are grouped into **System**, **Display**, **Reader**, **Controls**, **Library**, and **Connectivity**. A last row, **Profiles**, is a separate screen: see [Profiles](#368-profiles). System contains language, the setup guide, keyboard layouts, hidden-file visibility, file-extension visibility, Clock (where available), firmware updates, and About. Library contains Use Book Metadata, Hide New Files in Recent, Clear Read Books from Recent List, Move Finished Books to Read Folder, and Refresh Library. Time to Sleep is under Display; Clear Reading Cache is under Reader. Connectivity contains Wi-Fi, Bluetooth Page Turner, CrossPoint Sync, OPDS, and the Plugins toggle. The options below describe these settings.
 
 #### 3.6.1 Display
 
@@ -385,8 +386,6 @@ Side buttons, and Taps and gestures where supported by the device. See the
 - **Reading Goals**: Set your own reading targets. Each row steps through a list of values and then back to **Off**, so you can turn a goal off by pressing through to the end of its list. You can set minutes a day, minutes a week, a number of days in a row to keep, and books finished this calendar year (from 1 up). A book counts once per year: finishing it again in a later year counts again for that year, but reading it twice in one year counts once. Goals do not measure anything new. They use the same figures as the Statistics screen, so a goal you set today already counts the reading already recorded. Progress appears on the **[Home Screen](#31-home-screen)** and, for the daily goal, on the **Stats + Wallpaper** sleep screen. Because every goal is measured against a date, they only count once the clock has been set.
 
 - **Statistics → Years**: One review per year: reading time, books finished, days read, longest streak, best month and the books themselves. Each year is shown against the yearly book goal it had, which is recorded when you change the goal or open Statistics; years from before this was recorded show `--`. Reading time is kept for the last two years only, so older years show their books but not their time.
-
-- **Profiles**: Keep more than one reader on one device. Each profile has its own reading positions, statistics, goals, recent books, finished books, reading queue, yearly goal history, awards, bookmarks and clippings, and its own reading preferences — font, margins and line height. Wi-Fi, plugins, the library index and the catalogue servers stay shared. Creating a profile switches to it and opens a two-page setup guide, **Reading** (text settings) and **Goals**. It shows only what belongs to that profile, because the other settings are shared by the whole device. **Back** on the first page, or **Skip**, closes the guide and keeps the new profile with its default settings. The device starts with a single profile and nothing changes until you add a second one; the first profile keeps using the files it always had, so nothing is moved. Deleting a profile deletes its data, and asks first.
 
 - **Refresh Library** (**Settings → Library**): Rescan the SD card for books while preserving the arrival history of books already in the index.
 
@@ -601,6 +600,10 @@ Once any of the options above is set up, press **Confirm** while reading to open
 - With **Sync Behavior** set to **Ask every time**, choose **Apply Remote** to jump to remote progress or **Upload Local** to push current progress.
 - With **Sync Behavior** set to **Smart sync**, CrossPoint auto-resolves simple cases: upload when no remote progress exists, confirm and leave both unchanged when local and remote progress are already synchronized, upload when local progress is further ahead, or apply remote when remote progress is further ahead.
 
+#### 3.6.8 Profiles
+
+Open **Settings → Profiles**. Keep more than one reader on one device. Each profile has its own reading positions, statistics, goals, recent books, finished books, reading queue, yearly goal history, awards, bookmarks and clippings, custom sleep images, and its own reading preferences — font, margins and line height. Wi-Fi, plugins, the library index and the catalogue servers stay shared. Creating a profile switches to it and opens a two-page setup guide, **Reading** (text settings) and **Goals**. It shows only what belongs to that profile, because the other settings are shared by the whole device. **Back** on the first page, or **Skip**, closes the guide and keeps the new profile with its default settings. The device starts with a single profile and nothing changes until you add a second one; the first profile keeps using the files it always had, so nothing is moved. Deleting a profile deletes its data, and asks first.
+
 ### 3.7 Sleep Screen
 
 The **Sleep Screen** setting controls what is displayed when the device goes to sleep:
@@ -632,12 +635,14 @@ To use custom sleep images, set the sleep screen mode to **Custom** or **Cover +
 
 Like book covers, custom images are scaled to the screen using **Sleep Screen Cover Mode**. The first sleep with a new image takes longer while it is converted.
 
+Each [profile](#368-profiles) has its own custom images and its own transparent overlays (next section). The default profile uses the SD card root, as described above. Any other profile uses the same names inside its own folder, `/.crosspoint/profiles/<number>/`: for example `/.crosspoint/profiles/1/.sleep`, `/.crosspoint/profiles/1/sleep.bmp` and `/.crosspoint/profiles/1/.sleep-overlay`. **Settings → Profiles** shows the folder of each profile except the default one, under its name. A new profile has no images, so a mode that needs them uses its usual fallback (for example **Custom** shows **Dark**) until you add some. Deleting a profile deletes its images. A plugin that downloads `/sleep.bmp` writes to the SD card root, which only the default profile reads.
+
 #### Transparent overlay images
 
 To use transparent sleep overlays, set the sleep screen mode to **Transparent** or **Cover + Transparent**, then place BMP or PNG files on the SD card:
 
 - **Multiple Images (recommended):** Create a `.sleep-overlay` directory in the root of the SD card and place any number of valid overlay `.bmp` or `.png` images inside. One will be randomly selected each time the device sleeps. A directory named `sleep-overlay` is also accepted as a fallback.
-- **Single Image:** Place `sleep-overlay.bmp` or `sleep-overlay.png` in the root directory. A root BMP takes priority over a root PNG, and both take priority over the `.sleep-overlay`/`sleep-overlay` directories.
+- **Single Image:** Place `sleep-overlay.bmp` or `sleep-overlay.png` in the root directory (or in the profile's folder, see above). A root BMP takes priority over a root PNG, and both take priority over the `.sleep-overlay`/`sleep-overlay` directories.
 
 Transparent overlay files are intentionally separate from normal sleep images. Regular BMP formats supported by CrossPoint are accepted; white pixels leave the existing screen unchanged. For per-pixel alpha transparency, use a PNG with an alpha channel or a 32-bit BGRA BMP with both visible and non-opaque pixels. Opaque white pixels in alpha images erase the content behind them.
 
@@ -649,7 +654,7 @@ Transparent overlay files are intentionally separate from normal sleep images. R
 > - X3: Use a resolution of 528x792 pixels to match the device's screen resolution.
 
 > [!TIP]
-> You can set an image as the sleep screen cover directly from the BMP image viewer in the **[Browse Files](#33-browse-files-screen)** screen. On touch devices, long-press the image.
+> You can set an image as the sleep screen cover directly from the BMP image viewer in the **[Browse Files](#33-browse-files-screen)** screen. On touch devices, long-press the image. The image is saved for the profile in use.
 
 ---
 

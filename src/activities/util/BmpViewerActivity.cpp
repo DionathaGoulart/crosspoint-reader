@@ -17,13 +17,16 @@
 #include "components/UITheme.h"
 #include "fontIds.h"
 #include "util/BookCacheUtils.h"
+#include "util/SleepImagePaths.h"
 
 namespace {
-constexpr char CUSTOM_SLEEP_ROOT_BMP[] = "/sleep.bmp";
-constexpr char CUSTOM_SLEEP_TMP_BMP[] = "/sleep.bmp.tmp";
-constexpr char JPEG_SLEEP_TMP_PXC[] = "/sleep.bmp.pxc.tmp";
-constexpr char TRANSPARENT_SLEEP_ROOT_BMP[] = "/sleep-overlay.bmp";
-constexpr char TRANSPARENT_SLEEP_ROOT_PNG[] = "/sleep-overlay.png";
+// The active profile's sleep images: the SD root for the default profile, its
+// own folder for any other (see util/SleepImagePaths.h).
+std::string customSleepBmp() { return sleepimages::path(sleepimages::CUSTOM_BMP); }
+std::string customSleepTmpBmp() { return customSleepBmp() + ".tmp"; }
+std::string jpegSleepTmpPxc() { return customSleepBmp() + ".pxc.tmp"; }
+std::string transparentSleepBmp() { return sleepimages::path(sleepimages::OVERLAY_BMP); }
+std::string transparentSleepPng() { return sleepimages::path(sleepimages::OVERLAY_PNG); }
 constexpr size_t COPY_BUFFER_SIZE = 2048;
 constexpr uint8_t GRAYSCALE_PALETTE[] = {0, 0, 0, 0, 85, 85, 85, 0, 170, 170, 170, 0, 255, 255, 255, 0};
 
@@ -302,14 +305,20 @@ void BmpViewerActivity::onExit() {
 }
 
 bool BmpViewerActivity::saveJpegSleepCover() {
-  if (Storage.exists(JPEG_SLEEP_TMP_PXC) && !Storage.remove(JPEG_SLEEP_TMP_PXC)) {
+  if (!sleepimages::ensureRootDir()) {
+    LOG_ERR("BMP", "No folder for the sleep image");
+    return false;
+  }
+  const std::string pxcPath = jpegSleepTmpPxc();
+  const std::string tmpBmpPath = customSleepTmpBmp();
+  if (Storage.exists(pxcPath.c_str()) && !Storage.remove(pxcPath.c_str())) {
     LOG_ERR("BMP", "Failed to remove previous sleep image pixels");
     return false;
   }
   bool keepBmpTemp = false;
-  const ScopedCleanup cleanup{[&keepBmpTemp]() {
-    Storage.remove(JPEG_SLEEP_TMP_PXC);
-    if (!keepBmpTemp) Storage.remove(CUSTOM_SLEEP_TMP_BMP);
+  const ScopedCleanup cleanup{[&keepBmpTemp, &pxcPath, &tmpBmpPath]() {
+    Storage.remove(pxcPath.c_str());
+    if (!keepBmpTemp) Storage.remove(tmpBmpPath.c_str());
   }};
 
   JpegToFramebufferConverter decoder;
@@ -329,7 +338,7 @@ bool BmpViewerActivity::saveJpegSleepCover() {
       config.sourceCropY = 1.0f - ratio / screenRatio;
     }
   }
-  config.cachePath = JPEG_SLEEP_TMP_PXC;
+  config.cachePath = pxcPath.c_str();
   renderer.clearScreen();
   bool cacheWritten;
   if (!decoder.decodeToFramebuffer(filePath, renderer, config, cacheWritten) || !cacheWritten) {
@@ -338,7 +347,7 @@ bool BmpViewerActivity::saveJpegSleepCover() {
   }
 
   HalFile input, output;
-  if (!Storage.openFileForRead("BMP", JPEG_SLEEP_TMP_PXC, input)) return false;
+  if (!Storage.openFileForRead("BMP", pxcPath, input)) return false;
   uint16_t width, height;
   if (input.read(&width, sizeof(width)) != sizeof(width) || input.read(&height, sizeof(height)) != sizeof(height) ||
       width != config.maxWidth || height != config.maxHeight) {
@@ -356,7 +365,7 @@ bool BmpViewerActivity::saveJpegSleepCover() {
     LOG_ERR("BMP", "OOM: sleep image row");
     return false;
   }
-  if (!Storage.openFileForWrite("BMP", CUSTOM_SLEEP_TMP_BMP, output)) return false;
+  if (!Storage.openFileForWrite("BMP", tmpBmpPath, output)) return false;
   BmpHeader header;
   createBmpHeader(&header, width, height, BmpRowOrder::TopDown);
   header.infoHeader.biBitCount = 2;
@@ -379,7 +388,7 @@ bool BmpViewerActivity::saveJpegSleepCover() {
     LOG_ERR("BMP", "Failed to close sleep image");
     return false;
   }
-  if (!Storage.replaceFile(CUSTOM_SLEEP_TMP_BMP, CUSTOM_SLEEP_ROOT_BMP)) {
+  if (!Storage.replaceFile(tmpBmpPath.c_str(), customSleepBmp().c_str())) {
     // ponytail: FAT replacement is not atomic; keep the complete temp for recovery.
     keepBmpTemp = true;
     LOG_ERR("BMP", "Failed to publish sleep image");
@@ -395,21 +404,24 @@ void BmpViewerActivity::doSetSleepCover() {
   const bool transparentMode = !jpeg && overlaySleepMode();
   if (!canSetSleepCover()) return;
 
-  const char* destination =
-      transparentMode ? (FsHelpers::hasPngExtension(filePath) ? TRANSPARENT_SLEEP_ROOT_PNG : TRANSPARENT_SLEEP_ROOT_BMP)
-                      : CUSTOM_SLEEP_ROOT_BMP;
+  const std::string destination =
+      transparentMode ? (FsHelpers::hasPngExtension(filePath) ? transparentSleepPng() : transparentSleepBmp())
+                      : customSleepBmp();
   bool success = filePath == destination;
 
   if (jpeg) {
     success = saveJpegSleepCover();
   } else if (!success) {
     auto buffer = makeUniqueNoThrow<uint8_t[]>(COPY_BUFFER_SIZE);
-    if (!buffer) {
+    // A profile's own folder may not exist yet.
+    if (!sleepimages::ensureRootDir()) {
+      LOG_ERR("BMP", "No folder for the sleep image");
+    } else if (!buffer) {
       LOG_ERR("BMP", "OOM: sleep cover copy buffer");
     } else {
       // Copy beside the target and swap in only a complete image, so a failed
       // copy keeps the previous sleep cover instead of a truncated one.
-      const std::string tmp = std::string(destination) + ".tmp";
+      const std::string tmp = destination + ".tmp";
       HalFile inFile, outFile;
       if (Storage.openFileForRead("BMP", filePath, inFile) && Storage.openFileForWrite("BMP", tmp, outFile)) {
         int bytesRead;
@@ -422,14 +434,14 @@ void BmpViewerActivity::doSetSleepCover() {
         }
         if (bytesRead < 0) success = false;
         outFile.close();
-        success = success && Storage.replaceFile(tmp.c_str(), destination);
+        success = success && Storage.replaceFile(tmp.c_str(), destination.c_str());
         if (!success) Storage.remove(tmp.c_str());
       }
     }
   }
 
   if (success) {
-    sleepImageChanged(destination);
+    sleepImageChanged(destination.c_str());
     if (!transparentMode) SETTINGS.sleepScreen = CrossPointSettings::SLEEP_SCREEN_MODE::CUSTOM;
     SETTINGS.saveToFile();
     GUI.drawPopup(renderer, tr(STR_DONE));

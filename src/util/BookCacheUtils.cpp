@@ -10,6 +10,7 @@
 #include <cstring>
 
 #include "ClippingStore.h"
+#include "SleepImagePaths.h"
 
 bool isBookCacheDirectoryName(const char* name) {
   if (!name) {
@@ -37,12 +38,7 @@ void clearBookCache(const std::string& path) {
 }
 
 void sleepImageChanged(const char* path) {
-  while (path[0] == '/' && path[1] == '/') ++path;
-  // FAT names are case-insensitive.
-  if (strcasecmp(path, "/sleep.bmp") != 0 && strncasecmp(path, "/sleep/", 7) != 0 &&
-      strncasecmp(path, "/.sleep/", 8) != 0) {
-    return;
-  }
+  if (!sleepimages::isSleepImagePath(path)) return;
   auto dir = Storage.open("/.crosspoint");
   if (!dir || !dir.isDirectory()) return;
   char cachePath[64] = "/.crosspoint/";

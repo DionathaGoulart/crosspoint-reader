@@ -30,7 +30,6 @@
 #include "OnboardingActivity.h"
 #include "OpdsServerListActivity.h"
 #include "OtaUpdateActivity.h"
-#include "ProfilesSettingsActivity.h"
 #include "SdCardFontSystem.h"
 #include "SdFirmwareUpdateActivity.h"
 #include "SettingsList.h"
@@ -199,7 +198,6 @@ void SettingsActivity::rebuildSettings() {
     addAction(SettingsSection::General, StrId::STR_CLOCK, SettingAction::ClockSettings);
   }
   addAction(SettingsSection::General, StrId::STR_GOALS, SettingAction::GoalsSettings);
-  addAction(SettingsSection::General, StrId::STR_PROFILES, SettingAction::ProfilesSettings);
   addAction(SettingsSection::Reader, StrId::STR_CUSTOMISE_STATUS_BAR, SettingAction::CustomiseStatusBar);
   addAction(SettingsSection::Reader, StrId::STR_CLEAR_READING_CACHE, SettingAction::ClearCache);
 
@@ -415,13 +413,6 @@ void SettingsActivity::toggleSelectedSetting() {
           startActivityForResult(std::move(activity), resultHandler);
         } else {
           LOG_ERR("SETTINGS", "OOM: GoalsSettingsActivity");
-        }
-        break;
-      case SettingAction::ProfilesSettings:
-        if (auto activity = makeUniqueNoThrow<ProfilesSettingsActivity>(renderer, mappedInput)) {
-          startActivityForResult(std::move(activity), resultHandler);
-        } else {
-          LOG_ERR("SETTINGS", "OOM: ProfilesSettingsActivity");
         }
         break;
       case SettingAction::KOReaderSync:

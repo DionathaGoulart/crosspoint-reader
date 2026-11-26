@@ -156,6 +156,8 @@ One handler per event. A handler is either:
   appears the next time the Library opens. Hidden files and folders don't
   mark it.
 
+`/sleep.bmp` is read only by the default profile. Each other profile reads `sleep.bmp` in its own folder, `/.crosspoint/profiles/<id>/`, so a plugin that should set that profile's sleep image must use `dest: "/.crosspoint/profiles/<id>/sleep.bmp"`, with the profile's fixed folder number.
+
 Optional per handler:
 
 - **`toast`** — a template shown as the standard popup after the request

@@ -35,6 +35,7 @@
 #include "stats/GoalsSettings.h"
 #include "stats/StatsService.h"
 #include "stats/StatsText.h"
+#include "util/SleepImagePaths.h"
 
 namespace {
 // Metalio: B/W sleep images use the full 0xF7 waveform instead of HALF (two
@@ -69,10 +70,6 @@ bool useOriginalCoverThresholds(const GfxRenderer& renderer) {
 }
 
 // Kept separate from normal custom sleep sources so alpha-overlay art does not mix with full-screen wallpapers.
-constexpr char TRANSPARENT_SLEEP_ROOT_BMP[] = "/sleep-overlay.bmp";
-constexpr char TRANSPARENT_SLEEP_ROOT_PNG[] = "/sleep-overlay.png";
-constexpr char TRANSPARENT_SLEEP_DIR[] = "/.sleep-overlay";
-constexpr char TRANSPARENT_SLEEP_LEGACY_DIR[] = "/sleep-overlay";
 constexpr size_t MAX_SLEEP_FILE_NAME_LEN = 256;
 constexpr uint8_t MIN_VISIBLE_ALPHA = 8;
 
@@ -818,11 +815,13 @@ bool SleepActivity::renderCustomSleepBmp(const std::string& path) const {
 }
 
 void SleepActivity::renderCustomSleepScreen() const {
-  // /sleep.bmp on the SD root takes priority over both custom sleep directories.
-  if (renderCustomSleepBmp("/sleep.bmp")) return;
+  // sleep.bmp takes priority over both custom sleep directories.
+  if (renderCustomSleepBmp(sleepimages::path(sleepimages::CUSTOM_BMP))) return;
 
   std::string selectedPath;
-  selectRandomSleepFile("/.sleep", "/sleep", SleepRecentKind::Standard, selectedPath);
+  selectRandomSleepFile(sleepimages::path(sleepimages::CUSTOM_DIR).c_str(),
+                        sleepimages::path(sleepimages::CUSTOM_LEGACY_DIR).c_str(), SleepRecentKind::Standard,
+                        selectedPath);
   if (!selectedPath.empty()) {
     delay(100);
     if (renderCustomSleepBmp(selectedPath)) return;
@@ -973,8 +972,12 @@ void SleepActivity::renderStatsOverWallpaperSleepScreen() const {
   // The band takes the wallpaper's own bottom tone, so it reads as part of the picture.
   bool darkBand = false;
   std::string selectedPath;
-  selectRandomSleepFile("/.sleep", "/sleep", SleepRecentKind::Standard, selectedPath);
-  if (selectedPath.empty() && Storage.exists("/sleep.bmp")) selectedPath = "/sleep.bmp";
+  selectRandomSleepFile(sleepimages::path(sleepimages::CUSTOM_DIR).c_str(),
+                        sleepimages::path(sleepimages::CUSTOM_LEGACY_DIR).c_str(), SleepRecentKind::Standard,
+                        selectedPath);
+  if (selectedPath.empty() && Storage.exists(sleepimages::path(sleepimages::CUSTOM_BMP).c_str())) {
+    selectedPath = sleepimages::path(sleepimages::CUSTOM_BMP);
+  }
   if (selectedPath.empty()) {
     // No wallpaper on the card; the figures alone are the honest fallback.
     renderStatsSleepScreen();
@@ -1275,11 +1278,13 @@ bool SleepActivity::renderSleepOverlayPath(const std::string& path) const {
 }
 
 void SleepActivity::renderTransparentCustomSleepScreen() const {
-  if (renderSleepOverlayPath(TRANSPARENT_SLEEP_ROOT_BMP)) return;
-  if (renderSleepOverlayPath(TRANSPARENT_SLEEP_ROOT_PNG)) return;
+  if (renderSleepOverlayPath(sleepimages::path(sleepimages::OVERLAY_BMP))) return;
+  if (renderSleepOverlayPath(sleepimages::path(sleepimages::OVERLAY_PNG))) return;
 
   std::string selectedPath;
-  selectRandomSleepFile(TRANSPARENT_SLEEP_DIR, TRANSPARENT_SLEEP_LEGACY_DIR, SleepRecentKind::Overlay, selectedPath);
+  selectRandomSleepFile(sleepimages::path(sleepimages::OVERLAY_DIR).c_str(),
+                        sleepimages::path(sleepimages::OVERLAY_LEGACY_DIR).c_str(), SleepRecentKind::Overlay,
+                        selectedPath);
 
   if (!selectedPath.empty() && renderSleepOverlayPath(selectedPath)) return;
 

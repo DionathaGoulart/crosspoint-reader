@@ -7,6 +7,7 @@
 #include <algorithm>
 
 #include "MappedInputManager.h"
+#include "ProfilesSettingsActivity.h"
 #include "SettingsActivity.h"
 #include "components/UITheme.h"
 #include "components/UiAppHelpers.h"
@@ -17,7 +18,8 @@ namespace {
 constexpr int16_t ICON_SIZE = 32;
 // Row icons, indexed by SettingsSection.
 constexpr const freeink::Icon* SECTION_ICONS[SETTINGS_SECTION_COUNT] = {
-    &icon_settings_32, &icon_smartphone_32, &icon_book_open_32, &icon_pointer_32, &icon_library_32, &icon_wifi_32,
+    &icon_settings_32, &icon_smartphone_32, &icon_book_open_32, &icon_pointer_32,
+    &icon_library_32,  &icon_wifi_32,       &icon_users_32,
 };
 }  // namespace
 
@@ -84,6 +86,20 @@ void SettingsListActivity::activateIndex(const int index) {
 
 void SettingsListActivity::openSection(const SettingsSection section) {
   nav.selected = static_cast<int>(section);
+  if (section == SettingsSection::Profiles) {
+    auto profiles = makeUniqueNoThrow<ProfilesSettingsActivity>(renderer, mappedInput);
+    if (!profiles) {
+      LOG_ERR("SETTINGS", "OOM: ProfilesSettingsActivity");
+      return;
+    }
+    startActivityForResult(std::move(profiles), [this](const ActivityResult&) {
+      // A switch reloads the reader's settings, so rows and styling are rebuilt.
+      rebuildRows();
+      resetUi();
+      requestUpdate();
+    });
+    return;
+  }
   auto activity = makeUniqueNoThrow<SettingsActivity>(renderer, mappedInput, section);
   if (!activity) {
     LOG_ERR("SETTINGS", "OOM: SettingsActivity");
