@@ -3,4 +3,5 @@
 #     --manifest src/components/icons/headerIcons.manifest \
 #     --svgdir freeink-sdk/libs/assets/Icons/lucide/icons \
 #     --sizes 32 --out src/components/icons/headerIcons.h
+# then run python3 scripts/pixelate_icons.py.
 header-back = arrow-left

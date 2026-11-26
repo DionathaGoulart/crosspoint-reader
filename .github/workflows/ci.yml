@@ -210,6 +210,9 @@ jobs:
           python3 -m unittest discover -s test -p test_firmware_stats.py
           node --test test/firmware_comment.test.js
 
+      - name: Check icons are pixelated
+        run: python3 scripts/pixelate_icons.py --check
+
       - name: Install build tools
         run: |
           sudo apt-get update

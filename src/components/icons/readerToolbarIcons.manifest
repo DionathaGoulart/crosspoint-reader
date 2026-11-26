@@ -3,6 +3,7 @@
 #     --manifest src/components/icons/readerToolbarIcons.manifest \
 #     --svgdir freeink-sdk/libs/assets/Icons/lucide/icons \
 #     --sizes 24 --out src/components/icons/readerToolbarIcons.h
+# then run python3 scripts/pixelate_icons.py.
 reader-contents = menu
 reader-text = type
 reader-more = ellipsis
