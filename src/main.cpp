@@ -45,6 +45,7 @@
 #include "WifiCredentialStore.h"
 #include "activities/Activity.h"
 #include "activities/ActivityManager.h"
+#include "activities/settings/OnboardingActivity.h"
 #include "activities/settings/SdFirmwareUpdateActivity.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
@@ -767,6 +768,12 @@ void setup() {
   PROFILES.begin();
 
   APP_STATE.loadFromFile();
+  // A card from before the setup guide has no flag in state.json, or no
+  // state.json at all. If it already has settings, the reader set it up
+  // themselves: do not greet them with the guide.
+  if (!APP_STATE.onboardingKnown && Storage.exists(CrossPointSettings::getFilePath())) {
+    APP_STATE.onboardingDone = true;
+  }
   const bool isSleepWake = wakeupReason == HalGPIO::WakeupReason::PowerButton;
   const bool isPersistedSleepWake = isSleepWake && !APP_STATE.showBootScreen;
 
@@ -928,6 +935,12 @@ void setup() {
   } else if (rebootedFromPanic) {
     // If we rebooted from a panic, go to crash report screen to show the panic info
     activityManager.goToCrashReport();
+  } else if (!APP_STATE.onboardingDone && resume != BootResume::Silent && !isSleepWake) {
+    // First boot on this card: the setup guide, then Home when it ends. A wake
+    // from sleep skips it: the sleep image is still on the panel, and the guide
+    // has no clean-refresh handling for that.
+    activityManager.replaceActivity(
+        std::make_unique<OnboardingActivity>(renderer, mappedInputManager, onboarding::Mode::Full));
   } else if (resume == BootResume::Silent && snapshotTarget == SILENT_REBOOT_TARGET_READER &&
              !APP_STATE.openEpubPath.empty()) {
     activityManager.goToReader(APP_STATE.openEpubPath);

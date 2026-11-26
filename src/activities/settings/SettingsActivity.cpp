@@ -27,6 +27,7 @@
 #include "KeyboardLayoutsActivity.h"
 #include "LanguageSelectActivity.h"
 #include "MappedInputManager.h"
+#include "OnboardingActivity.h"
 #include "OpdsServerListActivity.h"
 #include "OtaUpdateActivity.h"
 #include "ProfilesSettingsActivity.h"
@@ -143,6 +144,7 @@ void SettingsActivity::rebuildSettings() {
 
   // Language leads so a user stuck in an unfamiliar language finds it first.
   addAction(SettingsSection::General, StrId::STR_LANGUAGE, SettingAction::Language);
+  addAction(SettingsSection::General, StrId::STR_SETUP_GUIDE, SettingAction::Setup);
   addAction(SettingsSection::General, StrId::STR_KEYBOARD_LAYOUTS, SettingAction::KeyboardLayouts);
   addAction(SettingsSection::Reader, StrId::STR_TEXT_SETTINGS, SettingAction::TextSettings);
   addAction(SettingsSection::Reader, StrId::STR_MANAGE_FONTS, SettingAction::DownloadFonts);
@@ -495,6 +497,14 @@ void SettingsActivity::toggleSelectedSetting() {
                                  // TextSettingsActivity saves on each change; no save needed here.
                                  rebuildSettings();
                                });
+        break;
+      case SettingAction::Setup:
+        // The guide may change the language, so the row labels are rebuilt on return.
+        if (auto activity = makeUniqueNoThrow<OnboardingActivity>(renderer, mappedInput, onboarding::Mode::Full)) {
+          startActivityForResult(std::move(activity), [this](const ActivityResult&) { rebuildSettings(); });
+        } else {
+          LOG_ERR("SETTINGS", "OOM: OnboardingActivity");
+        }
         break;
       case SettingAction::Language:
         // Row labels are translated once in rebuildRowItems() and don't

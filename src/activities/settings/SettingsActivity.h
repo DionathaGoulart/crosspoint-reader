@@ -30,6 +30,7 @@ enum class SettingAction {
   CheckForUpdates,
   SdFirmwareUpdate,
   Language,
+  Setup,
   DownloadFonts,
   TextSettings,
   Plugins,

@@ -21,6 +21,11 @@ class CrossPointState : public PersistableStore<CrossPointState> {
   uint8_t readerActivityLoadCount = 0;
   bool lastSleepFromReader = false;
   bool showBootScreen = true;
+  // The setup guide has been shown (or skipped) on this device.
+  bool onboardingDone = false;
+  // True when state.json carried the flag. A file without it predates the
+  // guide, and main() then decides from whether settings already exist.
+  bool onboardingKnown = false;
 
   static const char* getFilePath() { return "/.crosspoint/state.json"; }
   void toJson(JsonDocument& doc) const;

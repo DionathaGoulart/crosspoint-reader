@@ -98,7 +98,17 @@ To reboot the device (for example after a firmware update or if it's frozen), pr
 
 ### First Launch
 
-Upon turning the device on for the first time, you will be placed on the **[Home](#31-home-screen)** screen.
+Upon turning the device on for the first time, the **Setup guide** opens before the **[Home](#31-home-screen)** screen. It has five pages, and every choice is saved as soon as you make it:
+
+1. **Welcome** - the language and the name of your profile.
+2. **Reading** - font, size, spacing and margin, with a preview (the same screen as **Settings → Reader → Text Settings**).
+3. **Controls** - reading orientation, side button layout and, on devices with front buttons, **Remap Front Buttons**.
+4. **Sleep** - the sleep screen.
+5. **Goals** - your reading goals.
+
+Press **Next** to move on; the last page shows **Done**. **Back** returns to the previous page. On the first page the button reads **Skip** and leaves the guide. Leaving the guide, by **Skip** or **Done**, means it does not open again. If you turn the device off before then, it opens again at the next start.
+
+A card that already has settings from an older firmware does not open the guide. You can open it at any time from **Settings → System → Setup guide**.
 
 > [!NOTE]
 > On subsequent restarts, the firmware will automatically reopen the last book you were reading.
@@ -220,7 +230,7 @@ Books cannot be removed from your device through Calibre. Use the web interface 
 
 ### 3.6 Settings
 
-Settings are grouped into **System**, **Display**, **Reader**, **Controls**, **Library**, and **Connectivity**. System contains language, keyboard layouts, hidden-file visibility, file-extension visibility, Clock (where available), firmware updates, and About. Library contains Use Book Metadata, Hide New Files in Recent, Clear Read Books from Recent List, Move Finished Books to Read Folder, and Refresh Library. Time to Sleep is under Display; Clear Reading Cache is under Reader. Connectivity contains Wi-Fi, Bluetooth Page Turner, CrossPoint Sync, OPDS, and the Plugins toggle. The options below describe these settings.
+Settings are grouped into **System**, **Display**, **Reader**, **Controls**, **Library**, and **Connectivity**. System contains language, the setup guide, keyboard layouts, hidden-file visibility, file-extension visibility, Clock (where available), firmware updates, and About. Library contains Use Book Metadata, Hide New Files in Recent, Clear Read Books from Recent List, Move Finished Books to Read Folder, and Refresh Library. Time to Sleep is under Display; Clear Reading Cache is under Reader. Connectivity contains Wi-Fi, Bluetooth Page Turner, CrossPoint Sync, OPDS, and the Plugins toggle. The options below describe these settings.
 
 #### 3.6.1 Display
 
@@ -376,7 +386,7 @@ Side buttons, and Taps and gestures where supported by the device. See the
 
 - **Statistics → Years**: One review per year: reading time, books finished, days read, longest streak, best month and the books themselves. Each year is shown against the yearly book goal it had, which is recorded when you change the goal or open Statistics; years from before this was recorded show `--`. Reading time is kept for the last two years only, so older years show their books but not their time.
 
-- **Profiles**: Keep more than one reader on one device. Each profile has its own reading positions, statistics, goals, recent books, finished books, reading queue, yearly goal history, awards, bookmarks and clippings, and its own reading preferences — font, margins and line height. Wi-Fi, plugins, the library index and the catalogue servers stay shared. The device starts with a single profile and nothing changes until you add a second one; the first profile keeps using the files it always had, so nothing is moved. Deleting a profile deletes its data, and asks first.
+- **Profiles**: Keep more than one reader on one device. Each profile has its own reading positions, statistics, goals, recent books, finished books, reading queue, yearly goal history, awards, bookmarks and clippings, and its own reading preferences — font, margins and line height. Wi-Fi, plugins, the library index and the catalogue servers stay shared. Creating a profile switches to it and opens a two-page setup guide, **Reading** (text settings) and **Goals**. It shows only what belongs to that profile, because the other settings are shared by the whole device. **Back** on the first page, or **Skip**, closes the guide and keeps the new profile with its default settings. The device starts with a single profile and nothing changes until you add a second one; the first profile keeps using the files it always had, so nothing is moved. Deleting a profile deletes its data, and asks first.
 
 - **Refresh Library** (**Settings → Library**): Rescan the SD card for books while preserving the arrival history of books already in the index.
 
@@ -389,6 +399,8 @@ Side buttons, and Taps and gestures where supported by the device. See the
   - **Hide** persists across reboots. Setting **Settings → Connectivity → Plugins** to **Enabled** again brings the installer back.
   - Plugins with web settings appear on the **Plugins** page of the web UI while **File Transfer** is running. Its link is hidden while plugins are disabled.
   - Plugin Hub is optional. Users who prefer manual installation can download it directly from [crosspoint-plugin-hub releases](https://github.com/crosspoint-reader/crosspoint-plugin-hub/releases) and copy/extract the `pluginhub` folder so it ends up at `/.crosspoint/plugins/pluginhub/`, `/plugins/pluginhub/`, or `/.plugins/pluginhub/`. Once installed, Plugin Hub appears as a normal entry under **Home → Plugins**.
+
+- **Setup guide**: Opens the five-page guide described under [First Launch](#first-launch) again.
 
 - **Language**: Set the UI language. CrossPoint supports 32 languages: English, Spanish, French, German, Czech, Brazilian Portuguese, European Portuguese, Russian, Swedish, Romanian, Catalan, Ukrainian, Belarusian, Italian, Polish, Finnish, Danish, Dutch, Turkish, Kazakh, Hungarian, Lithuanian, Slovenian, Valencian, Hebrew, Arabic, Slovak, Bosnian, Vietnamese, Norwegian Bokmål, Indonesian, and Orangutan.
 

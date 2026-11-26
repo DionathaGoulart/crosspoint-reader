@@ -6,6 +6,7 @@
 #include <Memory.h>
 
 #include "MappedInputManager.h"
+#include "OnboardingActivity.h"
 #include "activities/util/ConfirmationActivity.h"
 #include "activities/util/KeyboardEntryActivity.h"
 #include "components/UITheme.h"
@@ -155,9 +156,29 @@ void ProfilesSettingsActivity::promptNewProfile() {
     // create() refuses an empty or duplicate name; the row list simply does not
     // grow, which is the honest feedback on a screen with no room for an error
     // line.
-    if (!PROFILES.create(name)) LOG_ERR("PROFILE", "Could not create profile");
-    rebuildRows();
-    requestUpdate();
+    uint8_t newId = profilePath::DEFAULT_ID;
+    if (!PROFILES.create(name, &newId)) {
+      LOG_ERR("PROFILE", "Could not create profile");
+      rebuildRows();
+      requestUpdate();
+      return;
+    }
+    // A new reader starts from defaults, so walk them through their own
+    // settings now: switch to the profile first, then open the guide.
+    // Only if the switch took: the guide writes into whichever profile is active.
+    if (!switchToProfile(newId)) {
+      rebuildRows();
+      requestUpdate();
+      return;
+    }
+    if (auto guide = makeUniqueNoThrow<OnboardingActivity>(renderer, mappedInput, onboarding::Mode::ProfileOnly)) {
+      startActivityForResult(std::move(guide), [this](const ActivityResult&) {
+        rebuildRows();
+        requestUpdate();
+      });
+    } else {
+      LOG_ERR("PROFILE", "OOM: setup guide");
+    }
   });
 }
 
@@ -212,7 +233,7 @@ void ProfilesSettingsActivity::promptDelete(const uint8_t id) {
   });
 }
 
-void ProfilesSettingsActivity::switchToProfile(const uint8_t id) {
+bool ProfilesSettingsActivity::switchToProfile(const uint8_t id) {
   // The render lock is the point. switchTo() ends in UITheme::reload(), which
   // destroys the theme object the render task may be calling virtual methods
   // on, and on the way there it reloads four stores from the card while the
@@ -220,8 +241,9 @@ void ProfilesSettingsActivity::switchToProfile(const uint8_t id) {
   // loop(), which ActivityManager does NOT hold the lock across.
   {
     RenderLock lock(*this);
-    if (!profiles::switchTo(id)) return;
+    if (!profiles::switchTo(id)) return false;
   }
   rebuildRows();
   requestUpdate();
+  return true;
 }
