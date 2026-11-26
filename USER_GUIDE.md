@@ -275,7 +275,7 @@ Settings are grouped into **System**, **Display**, **Reader**, **Controls**, **L
   - "In Reader" - Show battery percentage everywhere except in reading mode
   - "Always" - Always hide battery percentage
 
-- **Refresh Frequency**: Set how often the screen does a full refresh while reading to reduce ghosting; options are every 1, 5, 10, 15, or 30 pages.
+- **Refresh Frequency**: Set how often the screen does a full refresh while reading to reduce ghosting; options are every 1, 5, 10, 15, or 30 pages, or Never.
 
 - **UI Font**: Choose the font used for menus, library titles, and other interface text. The default is the built-in 8-bit pixel font (Jersey 10) for titles and list rows, with a plain font for small text. See [Menu Fonts](docs/sd-card-fonts.md#menu-fonts) for supported files and sizes.
 
@@ -348,7 +348,7 @@ Side buttons, and Taps and gestures where supported by the device. See the
   - "Chapter Skip" - In EPUBs, hold Next to open the next chapter or Previous to return to the chapter start. At the chapter start, hold Previous to open the previous chapter.
   - "Orientation Change" - Hold a page-turn button to rotate the reading orientation.
 
-- **Menu long press**: Selects the function bound to holding the menu button (Confirm) while reading an EPUB. **Cycles through the available functions** each time the setting is selected — additional functions may be added in future releases, so this is not a binary on/off toggle. A short press of Confirm always opens the reader menu as normal:
+- **Menu long press**: Selects the function bound to holding the menu button (Confirm) while reading an EPUB. Selecting the setting opens a list of the available functions; the list may grow in future releases. A short press of Confirm always opens the reader menu as normal:
   - "Bookmark" (default) - Hold Confirm (~0.4 second) to drop a bookmark at the current page.
   - "CrossPoint Sync" - Hold Confirm (~1 second) to launch KOReader sync directly.
   - "Dictionary" - Hold Confirm (~0.4 second) to start dictionary word selection on the current page (see [docs/dictionary.md](docs/dictionary.md)).
@@ -712,6 +712,8 @@ Internal EPUB links include chapter links, cross-references, and footnotes. Tap 
 
 If the device sleeps or you close the book after following a link, the book reopens on the page you were viewing. Back still returns you to where you followed the link. The reader keeps the three most recent return positions.
 
+Back also undoes your last jump: **Select Chapter**, **Go to %**, opening a bookmark or opening a clipping. A short press of **Back** goes back to the page you left. Only the last jump is kept, and only until you close the book. When there is nothing to return to, **Back** closes the book as usual.
+
 ### Dictionary Lookup
 
 Words on the current page can be looked up in an offline StarDict dictionary stored on the SD card. Copy a dictionary to the `/dictionaries/` folder, select it in **Settings → Reader → Dictionary**, then start a lookup by choosing **Look Up** in the **[Reader Menu](#5-reader-menu)** (or by holding **Confirm**, if the **Menu long press** setting in **[Controls Settings](#363-controls)** is set to "Dictionary"). Use **Left/Right** to highlight a word and press **Confirm** to show its definition.
@@ -720,7 +722,7 @@ See [docs/dictionary.md](docs/dictionary.md) for supported formats, setup, and w
 
 ### System Navigation
 
-* **Return to Home:** Press the **Back** button to close the book and return to the **[Home](#31-home-screen)** screen.
+* **Return to Home:** Press the **Back** button to close the book and return to the **[Home](#31-home-screen)** screen. If you just jumped with **Select Chapter**, **Go to %**, a bookmark or a clipping, the first short press goes back to the page you left instead.
 * **Return to Browse Files:** Press and hold the **Back** button to close the book and return to the **[Browse Files](#33-browse-files-screen)** screen.
 * **Reader Menu:** Press **Confirm** to open the **[Reader Menu](#5-reader-menu)**, which includes chapter navigation, reading options, and more.
 * **Long-press Confirm (configurable):** Holding **Confirm** runs the function chosen by the **Menu long press** setting in **[Controls Settings](#363-controls)** — including bookmarks, KOReader Sync, dictionary lookup, or clipping selection. A short press always opens the Reader Menu.
@@ -743,28 +745,32 @@ Press **Confirm** while reading to open the Reader Menu. From here you can acces
 
 The list menu remembers the selected entry while the book stays open. If that entry is no longer available, the cursor returns to the first entry. Closing the book resets the selection.
 
-Available options include:
+Available options include, in the order the menu lists them:
 
 - **Select Chapter** – Open the table of contents to jump to a specific chapter (see [Chapter Selection](#51-chapter-selection) below).
 - **Links and Footnotes** – Select an internal link on the current page. This option appears when the page contains links.
+- **Bookmarks** – Open this book's bookmarks *(shown after the first bookmark is saved)*.
+- **Text Settings** – Change the font, size, spacing and margins, with a preview.
+- **Go to %** – Jump to a specific position in the book by percentage.
 - **Look Up** – Select a word on the current page and show its dictionary definition (see [docs/dictionary.md](docs/dictionary.md)). Requires a dictionary to be selected in **Settings → Reader → Dictionary**.
-- **Bluetooth Page Turner** – Toggle Bluetooth for the saved remote. This entry appears after pairing a remote in **Settings → Connectivity → Bluetooth Page Turner** and disappears if that selected remote is forgotten.
+- **Toggle Bookmark** – Add or remove a bookmark on the current page. Bookmarks are described in [Bookmarks](#52-bookmarks).
 - **Create Clipping** – Select a range of text on the current page and save it as a highlighted clipping.
 - **View Clippings** – Open this book's saved clippings *(shown after the first clipping is saved)*.
+- **Night Mode** and **Frontlight** – Switch these without leaving the book. Frontlight appears only on devices that have one, and each is left out when a slide switch is assigned to it.
+- **Bluetooth Page Turner** – Toggle Bluetooth for the saved remote. This entry appears after pairing a remote in **Settings → Connectivity → Bluetooth Page Turner** and disappears if that selected remote is forgotten.
 - **Reading Orientation** – Cycle through screen orientations without leaving the reader.
 - **Auto Turn (Pages Per Minute)** – Cycle through automatic page turn speed options for hands-free reading.
-- **Go to %** – Jump to a specific position in the book by percentage.
 - **Take screenshot** – Save a screenshot of the current page to the `screenshots/` folder.
 - **Show page as QR** – Display a QR code encoding the current reading position.
-- **Go Home** – Close the book and return to the Home screen.
 - **Sync Progress** – Push or pull reading progress with a KOReader sync server (see [KOReader Sync Quick Setup](#367-koreader-sync-quick-setup)). This entry appears when sync credentials are saved or an enabled plugin subscribes to device events. Without sync credentials, it connects to Wi-Fi to send queued plugin events.
-- **Delete Book Cache** – Clear the cached layout data for the current book, forcing a re-index on next open.
+- **Go Home** – Close the book and return to the Home screen.
+- **Delete Book Cache** – Clear the cached layout data for the current book, forcing a re-index on next open. It asks you to confirm first, and your reading position is kept.
 
 Press **Back** at any time to close the menu and return to your current page.
 
 ### 5.1 Chapter Selection
 
-Accessible by selecting **Chapters** from the Reader Menu.
+Accessible by selecting **Select Chapter** from the Reader Menu.
 
 1. Use **Left** (or **Side Up**), or **Right** (or **Side Down**) to highlight the desired chapter.
 2. Press **Confirm** to jump to that chapter.
@@ -776,9 +782,9 @@ Accessible by selecting **Chapters** from the Reader Menu.
 
 Bookmarks can be created to quickly save and restore your place in a book.
 
-To create a bookmark, hold **Confirm** for about half a second while inside a book. A popup will appear letting you know a bookmark was created. The popup message will automatically disappear in a couple of seconds.
+To create a bookmark, hold **Confirm** for about half a second while inside a book, or choose **Toggle Bookmark** in the Reader Menu. A popup will appear letting you know a bookmark was created. The popup message will automatically disappear in a couple of seconds.
 
-To open bookmarks, press **Confirm** while inside a book. Then navigate to the **Bookmarks** menu. Bookmarks can be opened by navigating to them and pressing **Confirm**, which will redirect you to that place in the book. You can delete bookmarks by holding **Confirm** for about 0.7 seconds, and then pressing **Confirm** again to confirm deletion, or **Back** to cancel.
+To open bookmarks, press **Confirm** while inside a book. Then navigate to the **Bookmarks** menu (shown after the first bookmark is saved). Bookmarks can be opened by navigating to them and pressing **Confirm**, which will redirect you to that place in the book. You can delete bookmarks by holding **Confirm** for about 0.7 seconds, and then pressing **Confirm** again to confirm deletion, or **Back** to cancel.
 
 Bookmarks are stored in the `.crosspoint/bookmarks` folder (or `.crosspoint/profiles/<id>/bookmarks` when a profile other than the default is in use) in the JSON format.
 

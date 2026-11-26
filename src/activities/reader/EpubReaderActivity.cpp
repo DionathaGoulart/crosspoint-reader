@@ -55,6 +55,7 @@
 #include "activities/network/WifiSelectionActivity.h"
 #include "activities/reader/ProgressFile.h"
 #include "activities/settings/TextSettingsActivity.h"
+#include "activities/util/ConfirmationActivity.h"
 #include "clippings/ClippingText.h"
 #include "clippings/ClippingsManager.h"
 #include "components/UITheme.h"
@@ -748,6 +749,7 @@ void EpubReaderActivity::openClippings() {
   startActivityForResult(std::move(list), [this](const ActivityResult& result) {
     if (!result.isCancelled) {
       if (const auto* progress = std::get_if<ProgressChangeResult>(&result.data)) {
+        rememberJumpOrigin();
         applyProgressChange(*progress);
         return;
       }
@@ -1031,6 +1033,12 @@ void EpubReaderActivity::loop() {
     return;  // no build step before the menu shows
   }
 
+  if (jumpOrigin.valid && mappedInput.wasReleased(MappedInputManager::Button::Back) &&
+      mappedInput.getHeldTime() < ReaderUtils::GO_BACK_OR_HOME_MS) {
+    restoreJumpOrigin();
+    return;
+  }
+
   if (footnoteDepth > 0 && mappedInput.wasReleased(MappedInputManager::Button::Back) &&
       mappedInput.getHeldTime() < ReaderUtils::GO_BACK_OR_HOME_MS) {
     restoreSavedPosition();
@@ -1161,6 +1169,7 @@ void EpubReaderActivity::jumpToPercent(int percent) {
       (spineSize == 0) ? 0.0f : static_cast<float>(targetSize - prevCumulative) / static_cast<float>(spineSize);
   pendingSpineProgress = std::clamp(pendingSpineProgress, 0.0f, 1.0f);
 
+  rememberJumpOrigin();
   {
     RenderLock lock;
     clearDeferredReposition();
@@ -1238,6 +1247,7 @@ void EpubReaderActivity::onReaderMenuConfirm(EpubReaderMenuActivity::MenuAction 
     } else {
       const auto& sync = std::get<ProgressChangeResult>(result.data);
 
+      rememberJumpOrigin();
       applyProgressChange(sync);
     }
   };
@@ -1270,6 +1280,7 @@ void EpubReaderActivity::onReaderMenuConfirm(EpubReaderMenuActivity::MenuAction 
               return;
             }
             const auto& chapterResult = std::get<ChapterResult>(result.data);
+            rememberJumpOrigin();
             RenderLock lock;
             clearDeferredReposition();
             currentSpineIndex = chapterResult.spineIndex;
@@ -1344,21 +1355,42 @@ void EpubReaderActivity::onReaderMenuConfirm(EpubReaderMenuActivity::MenuAction 
       return;
     }
     case EpubReaderMenuActivity::MenuAction::DELETE_CACHE: {
-      {
-        RenderLock lock;
-        if (epub && section) {
-          uint16_t backupSpine = currentSpineIndex;
-          uint16_t backupPage = section->currentPage;
-          uint16_t backupPageCount = section->pageCount;
-          section.reset();
-          epub->clearCache();
-          epub->setupCacheDir();
-          if (!saveProgress(backupSpine, backupPage, backupPageCount)) {
-            LOG_ERR("ERS", "Failed to save progress before cache clear");
+      // Asked first: the book is re-indexed on the next open, which takes a
+      // while on a large book, and one press in a long menu is easy to make.
+      const std::string body = std::string(tr(STR_DELETE_CACHE)) + "\n" + tr(STR_DELETE_CACHE_BODY);
+      auto confirmation = makeUniqueNoThrow<ConfirmationActivity>(renderer, mappedInput, tr(STR_DELETE_ITEM_CONFIRM),
+                                                                  body, tr(STR_CANCEL), tr(STR_DELETE));
+      if (!confirmation) {
+        LOG_ERR("ERS", "OOM: delete cache confirmation");
+        openReaderMenu();
+        return;
+      }
+      startActivityForResult(std::move(confirmation), [this](const ActivityResult& result) {
+        if (result.isCancelled) {
+          openReaderMenu();
+          return;
+        }
+        {
+          RenderLock lock;
+          if (epub) {
+            // The section may have been released by a screen the menu came
+            // from; the page and count it left behind are the same figures.
+            const uint16_t backupSpine = currentSpineIndex;
+            const uint16_t backupPage = section ? section->currentPage : nextPageNumber;
+            const uint16_t backupPageCount = section ? section->pageCount : cachedChapterTotalPageCount;
+            section.reset();
+            epub->clearCache();
+            epub->setupCacheDir();
+            // The saved link stack points into the cache that was just cleared.
+            footnoteDepth = 0;
+            jumpOrigin.valid = false;
+            if (!saveProgress(backupSpine, backupPage, backupPageCount)) {
+              LOG_ERR("ERS", "Failed to save progress before cache clear");
+            }
           }
         }
-      }
-      onGoHome();
+        onGoHome();
+      });
       return;
     }
     case EpubReaderMenuActivity::MenuAction::SCREENSHOT: {
@@ -3352,6 +3384,9 @@ void EpubReaderActivity::navigateToHref(const std::string& hrefStr, const bool s
   }
 
   if (savePosition) {
+    // A followed link is newer than any jump before it: Back returns from the
+    // link first, and the earlier jump's undo is dropped.
+    jumpOrigin.valid = false;
     // Full: drop the oldest entry so Back always returns from the newest jump.
     if (footnoteDepth == MAX_FOOTNOTE_DEPTH) {
       std::copy(savedPositions + 1, savedPositions + MAX_FOOTNOTE_DEPTH, savedPositions);
@@ -3375,6 +3410,27 @@ void EpubReaderActivity::navigateToHref(const std::string& hrefStr, const bool s
   }
   requestUpdate();
   LOG_DBG("ERS", "Navigated to spine %d for href: %s", targetSpineIndex, hrefStr.c_str());
+}
+
+void EpubReaderActivity::rememberJumpOrigin() {
+  // A child screen (menu, chapter list) may have released the section;
+  // nextPageNumber then holds the page it was on.
+  jumpOrigin = {currentSpineIndex, section ? section->currentPage : nextPageNumber, true};
+  LOG_DBG("ERS", "Jump from spine %d, page %d", jumpOrigin.spineIndex, jumpOrigin.pageNumber);
+}
+
+void EpubReaderActivity::restoreJumpOrigin() {
+  if (!jumpOrigin.valid) return;
+  const JumpOrigin origin = jumpOrigin;
+  jumpOrigin.valid = false;
+  {
+    RenderLock lock;
+    clearDeferredReposition();
+    currentSpineIndex = origin.spineIndex;
+    nextPageNumber = origin.pageNumber;
+    section.reset();
+  }
+  requestUpdate();
 }
 
 void EpubReaderActivity::saveLinkStack() const {

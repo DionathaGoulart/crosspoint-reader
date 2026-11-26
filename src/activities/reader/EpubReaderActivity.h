@@ -221,6 +221,18 @@ class EpubReaderActivity final : public ReaderActivity {
 
   void navigateToHref(const std::string& href, bool savePosition = false);
   void restoreSavedPosition();
+  // Where the last Select Chapter, Go to %, bookmark or clipping jump left
+  // from, so a short Back can undo it. One slot, kept for this visit only: it
+  // is not in links.bin, and it is separate from the link stack above because
+  // the Links and Footnotes shortcuts read that one as "a link was followed".
+  struct JumpOrigin {
+    int spineIndex = 0;
+    int pageNumber = 0;
+    bool valid = false;
+  };
+  JumpOrigin jumpOrigin;
+  void rememberJumpOrigin();
+  void restoreJumpOrigin();
 
   void renderContents(std::unique_ptr<Page> page, int orientedMarginTop, int orientedMarginRight,
                       int orientedMarginBottom, int orientedMarginLeft);
