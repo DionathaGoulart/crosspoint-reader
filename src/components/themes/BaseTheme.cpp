@@ -530,6 +530,10 @@ Rect BaseTheme::drawPopup(const GfxRenderer& renderer, const char* message) cons
   const int h = textHeight + marginY * 2;
   const int x = (renderer.getScreenWidth() - w) / 2;
 
+  if (metrics.popupShadowOffset > 0) {
+    renderer.fillRect(x - frameThickness + metrics.popupShadowOffset, y - frameThickness + metrics.popupShadowOffset,
+                      w + frameThickness * 2, h + frameThickness * 2, true);
+  }
   const bool useRoundedPopup = metrics.popupCornerRadius > 0;
   if (useRoundedPopup) {
     renderer.fillRoundedRect(x - frameThickness, y - frameThickness, w + frameThickness * 2, h + frameThickness * 2,

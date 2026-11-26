@@ -17,7 +17,7 @@ for size in ${NOTOSANS_FONT_SIZES[@]}; do
   done
 done
 
-UI_FONT_SIZES=(10 12)
+UI_FONT_SIZES=(10)
 UI_FONT_STYLES=("Regular" "Bold")
 
 # Arabic glyphs for UI text (menus, file browser titles). The built-in fonts
@@ -68,6 +68,19 @@ for size in ${UI_FONT_SIZES[@]}; do
     echo "Generated $output_path"
   done
 done
+
+# The 12 pt UI slot (titles and list rows) is the 8-bit face Jersey 10. It has
+# one weight, so there is no bold cut. 13 pt at 150 DPI is a 1.5x scale of the
+# font's pixel grid, which keeps its stems even. Missing glyphs (Cyrillic,
+# Hebrew, Arabic, Vietnamese tones) come from the fallbacks, in this order.
+python fontconvert.py pixel_13_regular 13 \
+  ../builtinFonts/source/Jersey10/Jersey10-Regular.ttf \
+  ../builtinFonts/source/Ubuntu/Ubuntu-Regular.ttf \
+  ../builtinFonts/source/NotoSans/NotoSans-Regular.ttf \
+  ../builtinFonts/source/NotoSansHebrew/NotoSansHebrew-Regular.ttf \
+  ../builtinFonts/source/NotoSansArabic/NotoSansArabic-Regular.ttf \
+  ../builtinFonts/source/Ubuntu/Ubuntu-Vietnamese-Regular.ttf \
+  --additional-intervals 0x05D0,0x05EA "${ARABIC_INTERVALS[@]}" > ../builtinFonts/pixel_13_regular.h
 
 # The small UI face is Ubuntu too, so UI text stays in one family at every size.
 # At this size the stem of "1" sits across a pixel boundary and comes out 3 px

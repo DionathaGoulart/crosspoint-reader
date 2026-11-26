@@ -11,7 +11,7 @@
 #include "MappedInputManager.h"
 #include "RecentBooksStore.h"
 #include "components/themes/BaseTheme.h"
-#include "components/themes/lyra/LyraTheme.h"
+#include "components/themes/good/GoodTheme.h"
 
 UITheme UITheme::instance;
 
@@ -24,7 +24,7 @@ const ThemeMetrics& UITheme::getMetrics() const {
   // cached copy is refreshed when the flag differs instead of copying the struct per call.
   const bool touch = gpio.hasTouch();
   if (!metricsValid || touch != metricsForTouch) {
-    adjustedMetrics = LyraMetrics::values;
+    adjustedMetrics = GoodMetrics::values;
     if (touch) {
       adjustedMetrics.buttonHintsHeight = 0;
     }

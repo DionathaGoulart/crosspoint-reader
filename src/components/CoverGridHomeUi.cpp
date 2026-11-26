@@ -15,8 +15,8 @@
 #include "icons/book.h"
 #include "icons/folder.h"
 #include "icons/library.h"
-#include "icons/recent.h"
 #include "icons/settings2.h"
+#include "icons/stats.h"
 #include "icons/transfer.h"
 #include "stats/FinishedBooksStore.h"
 #include "stats/GoalsSettings.h"
@@ -270,7 +270,7 @@ void CoverGridHomeUi::drawCurrentText(UiScreen& screen, fui::Rect rect) {
   card.metaText = theme.smallText;
   card.progressText = theme.smallText;
   card.progressHeight = 6;
-  card.padding = fui::Insets{6, 6, 6, 6};
+  card.padding = fui::Insets{10, 14, 10, 14};
   // Zero width, full height: bookCard clamps the height to the content and
   // anchors the progress row to the cover's bottom, so it lands at the
   // card's bottom instead of its middle.
@@ -282,10 +282,19 @@ void CoverGridHomeUi::drawCurrentText(UiScreen& screen, fui::Rect rect) {
                          target.lineHeight(card.authorText.font) + target.lineHeight(card.metaText.font) +
                          target.lineHeight(card.progressText.font) + card.progressHeight + 4 * theme.spaceSm +
                          card.padding.top + card.padding.bottom;
-  const auto height = static_cast<int16_t>(std::min<int>(rect.height, textHeight));
+  constexpr int16_t SHADOW = 4;
+  // Leave room below and to the right for the card's hard shadow.
+  const auto height = static_cast<int16_t>(std::min<int>(rect.height - SHADOW, textHeight));
   rect.y = static_cast<int16_t>(rect.y + (rect.height - height) / 2);
   rect.height = height;
+  rect.width = static_cast<int16_t>(rect.width - SHADOW);
+  const auto ink = fui::Paint::solid(fui::Color::Black);
+  target.fill(fui::Rect{static_cast<int16_t>(rect.x + SHADOW), static_cast<int16_t>(rect.bottom()), rect.width, SHADOW},
+              ink);
+  target.fill(fui::Rect{static_cast<int16_t>(rect.right()), static_cast<int16_t>(rect.y + SHADOW), SHADOW, rect.height},
+              ink);
   fui::bookCard(screen.frame(), rect, card);
+  target.stroke(rect, ink, 2);
   drawSelectionBar(screen, rect, rect.height);
 }
 
@@ -294,8 +303,8 @@ void CoverGridHomeUi::drawSelectionBar(UiScreen& screen, const fui::Rect rect, c
   // button cursor without framing the cover. Touch boards tap directly.
   if (selected != 0 || BoardConfig::hasTouch()) return;
   screen.target().fill(
-      fui::Rect{static_cast<int16_t>(rect.x - 5), static_cast<int16_t>(rect.y + (rect.height - height) / 2), 3, height},
-      fui::Paint::dither(fui::Color::LightGray));
+      fui::Rect{static_cast<int16_t>(rect.x - 6), static_cast<int16_t>(rect.y + (rect.height - height) / 2), 4, height},
+      fui::Paint::solid(fui::Color::Black));
 }
 
 namespace {
@@ -308,7 +317,10 @@ constexpr StrId GOAL_LABELS[] = {StrId::STR_GOAL_DAILY, StrId::STR_GOAL_WEEKLY, 
 static_assert(std::size(GOAL_ORDER) == std::size(GOAL_LABELS));
 static_assert(std::size(GOAL_ORDER) == goals::kCount);
 
-constexpr int16_t GOAL_BAR_HEIGHT = 6;
+// An 8-bit gauge: a row of blocks, solid when earned and hollow when not.
+constexpr int16_t GOAL_BAR_HEIGHT = 10;
+constexpr int16_t GOAL_CELL_WIDTH = 10;
+constexpr int16_t GOAL_CELL_GAP = 2;
 constexpr int16_t GOAL_ROW_GAP = 8;
 constexpr int16_t LABEL_FIGURE_GAP = 8;
 constexpr int16_t GOAL_LABEL_BAR_GAP = 3;
@@ -374,10 +386,21 @@ void CoverGridHomeUi::drawGoals(UiScreen& screen, const fui::Rect rect) {
     target.text(fui::Rect{rect.x, y, labelWidth, lineHeight}, I18N.get(GOAL_LABELS[i]), label);
 
     const int16_t barY = static_cast<int16_t>(y + lineHeight + GOAL_LABEL_BAR_GAP);
-    target.stroke(fui::Rect{rect.x, barY, rect.width, GOAL_BAR_HEIGHT}, fui::Paint::solid(fui::Color::Black), 1);
-    const auto fill = static_cast<int16_t>(rect.width * progress.percent / 100);
-    if (fill > 0) {
-      target.fill(fui::Rect{rect.x, barY, fill, GOAL_BAR_HEIGHT}, fui::Paint::solid(fui::Color::Black));
+    const int cells = std::max(1, (rect.width + GOAL_CELL_GAP) / (GOAL_CELL_WIDTH + GOAL_CELL_GAP));
+    // Spread the leftover width over the gaps so the gauge spans the row.
+    const int gapSum = rect.width - cells * GOAL_CELL_WIDTH;
+    // Any progress shows at least one block, and only 100% fills them all.
+    const int filled = progress.percent >= 100 ? cells
+                       : progress.percent <= 0 ? 0
+                                               : std::clamp((cells * progress.percent + 50) / 100, 1, cells - 1);
+    for (int cell = 0; cell < cells; ++cell) {
+      const int x0 = rect.x + cell * GOAL_CELL_WIDTH + (cells > 1 ? gapSum * cell / (cells - 1) : 0);
+      const fui::Rect block{static_cast<int16_t>(x0), barY, GOAL_CELL_WIDTH, GOAL_BAR_HEIGHT};
+      if (cell < filled) {
+        target.fill(block, fui::Paint::solid(fui::Color::Black));
+      } else {
+        target.stroke(block, fui::Paint::solid(fui::Color::Black), 2);
+      }
     }
     y = static_cast<int16_t>(barY + GOAL_BAR_HEIGHT + GOAL_ROW_GAP);
   }
@@ -392,7 +415,7 @@ void CoverGridHomeUi::drawTabs(UiScreen& screen, fui::Rect rect) {
   // Transfer, and Settings itself was left with a navigable position that drew
   // no tab at all. Add an entry to one list and it has to be added to both.
   static constexpr int SLOT_POSITION = 3;
-  static constexpr const uint8_t* ICONS[] = {FolderIcon, LibraryIcon,  RecentIcon,
+  static constexpr const uint8_t* ICONS[] = {FolderIcon, LibraryIcon,  StatsIcon,
                                              BlocksIcon, TransferIcon, Settings2Icon};
   static constexpr int POSITIONS = static_cast<int>(sizeof(ICONS) / sizeof(ICONS[0]));
   // TAB_POSITIONS is what HomeActivity checks its own menu against; keeping the
@@ -432,13 +455,13 @@ void CoverGridHomeUi::drawTabs(UiScreen& screen, fui::Rect rect) {
   };
   // No pill fill; the underline marks the selected tab.
   tabs.tabStyles.explicitlySet = true;
-  tabs.selectedUnderline = 2;
+  tabs.selectedUnderline = 4;
   tabs.distributedSlotWidth = 0;
   fui::tabBar(screen.frame(), rect, tabs);
 }
 
 bool CoverGridHomeUi::paintFramedCover(fui::DrawTarget& target, fui::Rect rect, size_t index) {
-  constexpr int16_t SHADOW_OFFSET = 2;
+  constexpr int16_t SHADOW_OFFSET = 4;
   const auto ink = fui::Paint::solid(fui::Color::Black);
   target.fill(fui::Rect{rect.right(), static_cast<int16_t>(rect.y + SHADOW_OFFSET), SHADOW_OFFSET, rect.height}, ink);
   target.fill(fui::Rect{static_cast<int16_t>(rect.x + SHADOW_OFFSET), rect.bottom(), rect.width, SHADOW_OFFSET}, ink);
@@ -446,5 +469,7 @@ bool CoverGridHomeUi::paintFramedCover(fui::DrawTarget& target, fui::Rect rect, 
   // the art's left edge, so it stays aligned whatever each cover's margin is.
   const bool drawn = index < coverPaths.size() && coverCache.paint(rect, index, coverPaths[index]);
   if (drawn && index < coverTags.size()) drawCoverTag(target, rect, shelfstatus::label(coverTags[index]), tagText);
+  // A hard 2 px frame, so the cover reads as a sprite on the page.
+  target.stroke(rect, ink, 2);
   return drawn;
 }

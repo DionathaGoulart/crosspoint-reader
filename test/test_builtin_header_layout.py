@@ -7,7 +7,7 @@ def source(relative):
 
 base = source("src/components/themes/BaseTheme.cpp")
 metrics = source("src/components/themes/BaseTheme.h")
-lyra_metrics = source("src/components/themes/lyra/LyraTheme.h")
+good_metrics = source("src/components/themes/good/GoodTheme.h")
 
 # The system header's clock/battery location is independent of built-in theme metrics.
 for text in ("HEADER_STATUS_TOP = 10", "HEADER_STATUS_HEIGHT = 20",
@@ -30,8 +30,8 @@ assert re.search(
 )
 assert "getOrientedViewableTRBL" not in shift_helper
 assert "static_cast<int16_t>(rect.height - offset)" in base
-assert "headerBatterySide = 0" in lyra_metrics
-assert "headerClockCentered = false" in lyra_metrics
+assert "headerBatterySide = 0" in good_metrics
+assert "headerClockCentered = false" in good_metrics
 
 # Only the status row moves: title and buttons must land where the theme's
 # own strip height and topPadding put them, on every theme and board offset.

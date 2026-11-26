@@ -111,9 +111,11 @@ EpdFont ui10RegularFont(&ubuntu_10_regular);
 EpdFont ui10BoldFont(&ubuntu_10_bold);
 EpdFontFamily ui10FontFamily(10, &ui10RegularFont, &ui10BoldFont);
 
-EpdFont ui12RegularFont(&ubuntu_12_regular);
-EpdFont ui12BoldFont(&ubuntu_12_bold);
-EpdFontFamily ui12FontFamily(12, &ui12RegularFont, &ui12BoldFont);
+// The 8-bit face for titles and list rows. It has one weight, so bold text
+// uses the regular cut. The family keeps point size 12: the size-matched SD
+// CJK fallback keys on it.
+EpdFont ui12RegularFont(&pixel_13_regular);
+EpdFontFamily ui12FontFamily(12, &ui12RegularFont);
 
 // Definitions for SilentRestart.h. RTC_NOINIT survives ESP.restart() but not power loss.
 RTC_NOINIT_ATTR uint32_t silentRebootMagic;

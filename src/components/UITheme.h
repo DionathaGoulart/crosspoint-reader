@@ -6,7 +6,7 @@
 
 #include "CrossPointSettings.h"
 #include "components/themes/BaseTheme.h"
-#include "components/themes/lyra/LyraTheme.h"
+#include "components/themes/good/GoodTheme.h"
 
 class UITheme {
   // Static instance
@@ -50,7 +50,7 @@ class UITheme {
 
  private:
   // GoodTheme, the only theme. Held by value: no allocation at static init.
-  LyraTheme theme;
+  GoodTheme theme;
   mutable ThemeMetrics adjustedMetrics;
   mutable bool metricsValid = false;
   mutable bool metricsForTouch = false;

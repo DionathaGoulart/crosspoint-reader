@@ -56,8 +56,8 @@ harness = r"""
 #include <BoardConfig.h>
 #include <EpdFont.h>
 #include <builtinFonts/ubuntu_10_regular.h>
-#include <builtinFonts/ubuntu_12_regular.h>
-#include <components/themes/lyra/LyraTheme.h>
+#include <builtinFonts/pixel_13_regular.h>
+#include <components/themes/good/GoodTheme.h>
 #include <algorithm>
 #include <array>
 #include <cassert>
@@ -172,13 +172,13 @@ struct Target : fui::GfxRendererTarget {
   fui::Rect clipRect() const override { return clip; }
   bool setClipRect(fui::Rect rect) override { clip = rect; return true; }
   fui::Size measureText(fui::FontId font, const char* text, fui::TextStyle) const override {
-    EpdFont epdFont(font == 0 ? &ubuntu_10_regular : &ubuntu_12_regular);
+    EpdFont epdFont(font == 0 ? &ubuntu_10_regular : &pixel_13_regular);
     int width, height;
     epdFont.getTextDimensions(text, &width, &height);
     return {static_cast<int16_t>(width), lineHeight(font)};
   }
   int16_t lineHeight(fui::FontId font) const override {
-    return font == 0 ? ubuntu_10_regular.advanceY : ubuntu_12_regular.advanceY;
+    return font == 0 ? ubuntu_10_regular.advanceY : pixel_13_regular.advanceY;
   }
   void fill(fui::Rect rect, fui::Paint, uint8_t, uint8_t) override { fills.push_back(rect); }
   void stroke(fui::Rect, fui::Paint, uint8_t, uint8_t, uint8_t) override {}
@@ -391,7 +391,7 @@ int main() {
                               BoardConfig::XTEINK_X4, BoardConfig::XTEINK_X4_CLASSIC})
     for (auto orientation : {GfxRenderer::Portrait, GfxRenderer::PortraitInverted,
                              GfxRenderer::LandscapeClockwise, GfxRenderer::LandscapeCounterClockwise})
-      for (const auto& metrics : {LyraMetrics::values})
+      for (const auto& metrics : {GoodMetrics::values})
         checkStyleRowsFit(profile, orientation, metrics);
   for (const auto& profile : {BoardConfig::XTEINK_X3, BoardConfig::XTEINK_X3_UC8279, BoardConfig::XTEINK_X4,
                               BoardConfig::XTEINK_X4_PRO, BoardConfig::XTEINK_X4_CLASSIC, BoardConfig::STICKY,
@@ -399,7 +399,7 @@ int main() {
                               BoardConfig::PICCO})
     for (auto orientation : {GfxRenderer::Portrait, GfxRenderer::PortraitInverted,
                              GfxRenderer::LandscapeClockwise, GfxRenderer::LandscapeCounterClockwise})
-      for (const auto& metrics : {LyraMetrics::values})
+      for (const auto& metrics : {GoodMetrics::values})
         for (Tab tab : {Tab::Family, Tab::Size, Tab::Layout, Tab::Style})
           checkLayout(profile, orientation, metrics, tab);
   checkSharedPartialRows();

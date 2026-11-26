@@ -25,8 +25,8 @@ inline void drawCoverTag(freeink::ui::DrawTarget& target, const freeink::ui::Rec
   // A white rim keeps the label readable on a dark cover.
   target.fill(fui::Rect{static_cast<int16_t>(pill.x - 1), static_cast<int16_t>(pill.y - 1),
                         static_cast<int16_t>(pill.width + 2), static_cast<int16_t>(pill.height + 2)},
-              fui::Paint::solid(fui::Color::White), 4);
-  target.fill(pill, fui::Paint::solid(fui::Color::Black), 3);
+              fui::Paint::solid(fui::Color::White), 0);
+  target.fill(pill, fui::Paint::solid(fui::Color::Black), 0);
   target.text(fui::Rect{static_cast<int16_t>(pill.x + kPadX), static_cast<int16_t>(pill.y + kPadY),
                         static_cast<int16_t>(pill.width - kPadX * 2), static_cast<int16_t>(height - kPadY * 2)},
               label, style);

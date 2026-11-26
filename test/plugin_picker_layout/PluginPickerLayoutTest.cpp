@@ -1,6 +1,6 @@
 #include <EpdFont.h>
+#include <builtinFonts/pixel_13_regular.h>
 #include <builtinFonts/ubuntu_10_regular.h>
-#include <builtinFonts/ubuntu_12_regular.h>
 #include <gtest/gtest.h>
 
 #include <string>
@@ -19,7 +19,7 @@ class FontTarget final : public fui::DrawTarget {
     return {static_cast<int16_t>(width), lineHeight(font)};
   }
   int16_t lineHeight(fui::FontId font) const override {
-    return font == 0 ? ubuntu_10_regular.advanceY : ubuntu_12_regular.advanceY;
+    return font == 0 ? ubuntu_10_regular.advanceY : pixel_13_regular.advanceY;
   }
   void fill(fui::Rect, fui::Paint, uint8_t, uint8_t) override {}
   void stroke(fui::Rect, fui::Paint, uint8_t, uint8_t, uint8_t) override {}
@@ -30,7 +30,7 @@ class FontTarget final : public fui::DrawTarget {
 
  private:
   EpdFont small{&ubuntu_10_regular};
-  EpdFont body{&ubuntu_12_regular};
+  EpdFont body{&pixel_13_regular};
 };
 
 fui::ListProps pickerProps() {

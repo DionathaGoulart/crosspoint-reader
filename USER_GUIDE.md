@@ -267,7 +267,7 @@ Settings are grouped into **System**, **Display**, **Reader**, **Controls**, **L
 
 - **Refresh Frequency**: Set how often the screen does a full refresh while reading to reduce ghosting; options are every 1, 5, 10, 15, or 30 pages.
 
-- **UI Font**: Choose the font used for menus, library titles, and other interface text. See [Menu Fonts](docs/sd-card-fonts.md#menu-fonts) for supported files and sizes.
+- **UI Font**: Choose the font used for menus, library titles, and other interface text. The default is the built-in 8-bit pixel font (Jersey 10) for titles and list rows, with a plain font for small text. See [Menu Fonts](docs/sd-card-fonts.md#menu-fonts) for supported files and sizes.
 
 - **Sunlight Fading Fix**: Configure whether to enable a software-fix for the issue where white X4 models may fade when used in direct sunlight:
   

@@ -4,8 +4,9 @@
 
 class GfxRenderer;
 
-// Lyra theme metrics (zero runtime cost)
-namespace LyraMetrics {
+// GoodTheme metrics (zero runtime cost): an 8-bit look. Square corners, thick
+// rules, black selection blocks and hard drop shadows, nothing grey but dither.
+namespace GoodMetrics {
 constexpr ThemeMetrics values = {.batteryWidth = 16,
                                  .batteryHeight = 12,
                                  // Shared anchor for every header band, including the cover-grid
@@ -19,16 +20,16 @@ constexpr ThemeMetrics values = {.batteryWidth = 16,
                                  .contentSidePadding = 20,
                                  .listRowHeight = 40,
                                  .listWithSubtitleRowHeight = 60,
-                                 .listRowGap = 0,
-                                 .listRowRadius = 6,
+                                 .listRowGap = 2,
+                                 .listRowRadius = 0,
                                  .listInset = 20,
                                  .listSidePadding = 8,
-                                 .listSelectionStyle = 1,  // light pill
+                                 .listSelectionStyle = 0,  // invert fill
                                  .listScrollWidth = 4,
                                  .listScrollSide = 0,
                                  .listTitleBold = false,
                                  .headerSidePadding = 18,
-                                 .headerUnderlineSize = 3,
+                                 .headerUnderlineSize = 4,
                                  .headerTitleAlign = 0,  // left
                                  .headerBatterySide = 0,
                                  .headerClockCentered = false,
@@ -51,16 +52,17 @@ constexpr ThemeMetrics values = {.batteryWidth = 16,
                                  .popupTopOffsetRatio = 0.165f,
                                  .popupMarginX = 16,
                                  .popupMarginY = 12,
-                                 .popupFrameThickness = 2,
-                                 .popupCornerRadius = 6,
+                                 .popupFrameThickness = 3,
+                                 .popupCornerRadius = 0,
+                                 .popupShadowOffset = 4,
                                  .popupTextBold = false,
-                                 .popupTextInverted = false,
+                                 .popupTextInverted = true,
                                  .popupTextBaselineOffsetY = -2,
                                  .popupProgressBarHeight = 4,
-                                 .popupProgressDrawOutline = false,
+                                 .popupProgressDrawOutline = true,
                                  .popupProgressClampPercent = false,
-                                 .popupProgressFillInverted = false,
-                                 .popupProgressOutlineInverted = false,
+                                 .popupProgressFillInverted = true,
+                                 .popupProgressOutlineInverted = true,
                                  .optionPopupItemSpacing = 8,
                                  .optionPopupInnerPadding = 20,
                                  .optionPopupSelectionVPadding = 12,
@@ -69,12 +71,12 @@ constexpr ThemeMetrics values = {.batteryWidth = 16,
                                  .textFieldNormalThickness = 1,
                                  .textFieldCursorThickness = 3,
                                  .textFieldLineEndOffset = 0,
-                                 .controlRadius = 6,
-                                 .sheetRadius = 6,
-                                 .capsuleRadius = 6};
-}  // namespace LyraMetrics
+                                 .controlRadius = 0,
+                                 .sheetRadius = 0,
+                                 .capsuleRadius = 0};
+}  // namespace GoodMetrics
 
-class LyraTheme : public BaseTheme {
+class GoodTheme : public BaseTheme {
  public:
   // Component drawing methods
   void fillBatteryIcon(const GfxRenderer& renderer, Rect rect, uint16_t percentage) const override;

@@ -47,7 +47,7 @@ struct ThemeMetrics {
   // uiScale fonts supply the sizes. Plain data by design — the eventual
   // SD-card theme files will provide exactly these values.
   int listRowGap;          // vertical gap between rows
-  int listRowRadius;       // row corner radius (RoundedRaff cards, Lyra pill)
+  int listRowRadius;       // row corner radius, 0 = square
   int listInset;           // horizontal inset of the whole list band
   int listSidePadding;     // text inset within a row
   int listSelectionStyle;  // 0=invert fill, 1=light pill, 2=underline, 3=triangle (fui::SelectionStyle order)
@@ -56,7 +56,7 @@ struct ThemeMetrics {
   bool listTitleBold;      // bold row titles (RoundedRaff)
   // FreeInkUI header shape, same contract as the list fields above.
   int headerSidePadding;    // title text inset
-  int headerUnderlineSize;  // bottom rule thickness (Lyra), 0 = none
+  int headerUnderlineSize;  // bottom rule thickness, 0 = none
   int headerTitleAlign;     // 0 = left, 1 = center, 2 = right (fui::TextAlign order)
   int headerBatterySide;    // 0 = right edge, 1 = left edge
   // Header status positioning is shared across built-in themes.
@@ -94,6 +94,7 @@ struct ThemeMetrics {
   int popupMarginY;
   int popupFrameThickness;
   int popupCornerRadius;
+  int popupShadowOffset;  // hard black drop shadow behind popups, 0 = none
   bool popupTextBold;
   bool popupTextInverted;
   int popupTextBaselineOffsetY;
@@ -141,7 +142,7 @@ enum UIIcon {
   Blocks
 };
 
-// Shared drawing for the theme; LyraTheme (GoodTheme) overrides parts of it.
+// Shared drawing for the theme; GoodTheme overrides parts of it.
 
 namespace BaseMetrics {
 constexpr ThemeMetrics values = {.batteryWidth = 15,
@@ -190,6 +191,7 @@ constexpr ThemeMetrics values = {.batteryWidth = 15,
                                  .popupMarginY = 15,
                                  .popupFrameThickness = 2,
                                  .popupCornerRadius = 0,
+                                 .popupShadowOffset = 0,
                                  .popupTextBold = true,
                                  .popupTextInverted = true,
                                  .popupTextBaselineOffsetY = -2,
