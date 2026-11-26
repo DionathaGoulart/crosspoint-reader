@@ -37,7 +37,9 @@ Snapshot load();
 //
 // The home screen is entered on every return from a book, the library or
 // settings, so this runs far more often than load() was written for.
-stats::Summary summaryOnly();
+// ok, when given, is set to false when the aggregate could not be allocated;
+// the summary is then empty.
+stats::Summary summaryOnly(bool* ok = nullptr);
 
 // The reader's current UTC offset in minutes, the same way the session log
 // records it. Exposed because a screen formatting dates needs the same offset

@@ -1,5 +1,4 @@
 #pragma once
-#include <functional>
 #include <vector>
 
 #include "./FileBrowserActivity.h"
@@ -27,20 +26,6 @@ class HomeActivity final : public Activity {
     return hasOpdsServers ? HomeMenuItem::OPDS_BROWSER : HomeMenuItem::NONE;
   }
   bool hasContinueReading = false;
-  int continueReadingProgress = -1;
-  bool coverRendered = false;      // Track if cover has been rendered once
-  bool coverBufferStored = false;  // Track if cover buffer is stored
-  uint8_t* coverBuffer = nullptr;  // HomeActivity's own buffer for cover image
-  size_t coverBufferSize = 0;      // Bytes allocated to coverBuffer
-  // Output polarity the snapshot was taken in (night mode stores images pre-inverted).
-  bool coverBufferInverted = false;
-  // Logical rect last passed to drawRecentBookCover. The cover snapshot only
-  // needs to cover this region, not the entire framebuffer, so we cache the
-  // tile instead of all 48 KB. Set in render() before the call.
-  int coverRectX = 0;
-  int coverRectY = 0;
-  int coverRectW = 0;
-  int coverRectH = 0;
   std::vector<RecentBook> recentBooks;
   const HomeMenuItem initialMenuItem;
   const bool cleanInitialRefresh;
@@ -84,11 +69,8 @@ class HomeActivity final : public Activity {
   void onPluginsOpen();
 
   int getMenuItemCount() const;
-  bool storeCoverBuffer();    // Store frame buffer for cover image
-  bool restoreCoverBuffer();  // Restore frame buffer from stored cover
-  void freeCoverBuffer();     // Free the stored cover buffer
   void loadRecentBooks(int maxBooks);
-  void loadRecentCovers(int coverHeight);
+  void loadRecentCovers();
   void fillCoverGridFromLibrary();
   void resolveGridCoverPaths();
   void loadGridCover(RecentBook& book, int height, bool& showingLoading, Rect& popupRect);

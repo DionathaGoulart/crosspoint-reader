@@ -278,20 +278,6 @@ inline SettingInfo buildDoublePowerButtonSetting() {
       "doublePwrBtn", StrId::STR_CAT_CONTROLS);
 }
 
-inline std::vector<StrId> homeThemeValues() {
-  static constexpr StrId VALUES[] = {StrId::STR_THEME_CLASSIC,       StrId::STR_THEME_LYRA,
-                                     StrId::STR_THEME_LYRA_EXTENDED, StrId::STR_THEME_ROUNDEDRAFF,
-                                     StrId::STR_THEME_COVER_GRID,    StrId::STR_THEME_GOALS};
-  // The last two both draw through CoverGridHomeUi, whose cover cache needs
-  // PSRAM; drop both where there is none. Append a theme after them and this
-  // count silently drops the wrong entries, so it is asserted here.
-  constexpr size_t PSRAM_ONLY = 2;
-  static_assert(VALUES[std::size(VALUES) - 1] == StrId::STR_THEME_GOALS &&
-                VALUES[std::size(VALUES) - 2] == StrId::STR_THEME_COVER_GRID);
-  const size_t count = UITheme::supportsCoverGrid() ? std::size(VALUES) : std::size(VALUES) - PSRAM_ONLY;
-  return {VALUES, VALUES + count};
-}
-
 using SettingVisitor = void (*)(void* context, SettingInfo& info);
 
 // Visits synchronously in list order. Borrowed references are valid only during

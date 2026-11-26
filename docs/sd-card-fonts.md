@@ -90,7 +90,7 @@ file from the SD card. The Fonts page can delete families stored in subfolders.
 
 ## Menu Fonts
 
-Choose a font under **Settings > Display > UI Font**, below **UI Theme**.
+Choose a font under **Settings > Display > UI Font**, below **Refresh Frequency**.
 A `.cpfont` family appears in the picker if it includes 8, 10, and 12 pt files.
 These sizes match the three menu font sizes. If an older install is missing
 a size, update the family in **Manage Fonts** or add the missing files manually.

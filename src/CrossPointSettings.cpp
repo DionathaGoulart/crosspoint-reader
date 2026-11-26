@@ -88,7 +88,6 @@ constexpr const char* PROFILE_SETTING_KEYS[] = {
     "embeddedStyle",
     "focusReadingEnabled",
     "textAntiAliasing",
-    "uiTheme",
     "goalDailyMinutes",
     "goalWeeklyMinutes",
     "goalStreakDays",
@@ -102,7 +101,7 @@ constexpr char PROFILE_SETTINGS_FILE[] = "settings.json";
 
 // lineHeight and lineSpacing are one field under two spellings, so the key
 // count is one more than the number of assignments in resetProfileSettings().
-static_assert(sizeof(PROFILE_SETTING_KEYS) / sizeof(PROFILE_SETTING_KEYS[0]) == 20,
+static_assert(sizeof(PROFILE_SETTING_KEYS) / sizeof(PROFILE_SETTING_KEYS[0]) == 19,
               "add the matching line to resetProfileSettings() when this list changes");
 
 bool CrossPointSettings::isProfileSetting(const char* key) {
@@ -604,7 +603,6 @@ void CrossPointSettings::resetProfileSettings() {
   embeddedStyle = DEFAULT_EMBEDDED_STYLE;
   focusReadingEnabled = DEFAULT_FOCUS_READING_ENABLED;
   textAntiAliasing = DEFAULT_TEXT_ANTI_ALIASING;
-  uiTheme = LYRA;
   goalDailyMinutes = 0;
   goalWeeklyMinutes = 0;
   goalStreakDays = 0;

@@ -5,7 +5,6 @@
 #include "CrossPointSettings.h"
 #include "CrossPointState.h"
 #include "RecentBooksStore.h"
-#include "components/UITheme.h"
 #include "profiles/ProfileStore.h"
 #include "stats/AchievementStore.h"
 #include "stats/FinishedBooksStore.h"
@@ -39,8 +38,6 @@ bool switchTo(const uint8_t id) {
   YEAR_GOALS.reset();
   ACHIEVEMENTS.reset();
 
-  // Settings first: the theme is one of the reader's own preferences, and
-  // UITheme::reload() below reads it.
   SETTINGS.loadFromFile();
   RECENT_BOOKS.loadFromFile();
   FINISHED_BOOKS.loadFromFile();
@@ -61,7 +58,6 @@ bool switchTo(const uint8_t id) {
   APP_STATE.lastSleepFromReader = false;
   APP_STATE.saveToFile();
 
-  UITheme::getInstance().reload();
   LOG_INF("PROFILE", "Switched to profile %u", static_cast<unsigned>(id));
   return true;
 }

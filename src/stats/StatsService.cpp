@@ -31,8 +31,8 @@ namespace {
 // rules -- finishedCount() rather than size(), and the yearly goal count --
 // are stated once and cannot drift apart.
 stats::Summary summarizeWith(const stats::StatsAggregate& aggregate, const int64_t now, const int tz) {
-  // Once per boot or profile: every change to the store saves, so the copy in
-  // memory is the file. The goals home asks for this on every entry.
+  // Every change to the store saves, so the copy in memory is the file. Home
+  // asks for this on every entry; without PSRAM it releases the store again.
   FINISHED_BOOKS.ensureLoaded();
   // finishedCount(), not size(): an entry can exist for a rating on a book that
   // was never read, and counting those inflates the yearly goal and the awards.
@@ -62,8 +62,9 @@ statsService::Snapshot statsService::load() {
   return snapshot;
 }
 
-stats::Summary statsService::summaryOnly() {
+stats::Summary statsService::summaryOnly(bool* ok) {
   auto aggregate = makeUniqueNoThrow<stats::StatsAggregate>();
+  if (ok) *ok = aggregate != nullptr;
   if (!aggregate) {
     LOG_ERR("STATS", "no memory for the statistics aggregate (%u bytes)",
             static_cast<unsigned>(sizeof(stats::StatsAggregate)));

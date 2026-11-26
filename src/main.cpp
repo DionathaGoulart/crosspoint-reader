@@ -790,7 +790,6 @@ void setup() {
   OPDS_STORE.loadFromFile();
   OPDS_TOKENS.loadFromFile();
   LCP_PASSPHRASES.loadFromFile();
-  UITheme::getInstance().reload();
   ButtonNavigator::setMappedInputManager(mappedInputManager);
   pluginevents::refreshSubscriptions();
   // Seed the system clock from the battery-backed RTC: on RTC boards it is the

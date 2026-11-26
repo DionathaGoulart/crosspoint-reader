@@ -111,7 +111,9 @@ Upon turning the device on for the first time, you will be placed on the **[Home
 
 The Home screen is the main entry point to the firmware. From here you can navigate to **[Reading Mode](#4-reading-mode)** with the most recently read book, **[Browse Files](#33-browse-files-screen)**, the **[Library](#34-library-screen)**, **Statistics**, **[File Transfer](#35-file-transfer-screen)**, or **[Settings](#36-settings)**. Plugins or an OPDS catalog appear as one further entry when either is set up.
 
-When saved reading progress is available, Lyra shows the percentage and a progress bar below the book title and author.
+The Home screen shows your [reading goals](#364-system) at the top and the book you are reading below them, with its percentage and a progress bar when saved progress is available. If you have not opened a book yet, it shows the newest book in your library instead. On devices with PSRAM the book is shown as its cover, with a **To read**, **Reading**, **Read** or **Rereading** tag on the cover when one applies. On devices without PSRAM (such as the X3 and X4) it is shown as a card with the title, author, that tag and the progress.
+
+The menu is a row of icons at the bottom: Browse Files, Library, Statistics, Plugins or OPDS when set up, File Transfer, Settings. **Left** and **Right** move along the icons; **Side Up** and **Side Down** move through the book and then the icons. Press **Back** to resume the book you were reading. On touch devices, tap the book or an icon.
 
 ### 3.2 Reading Mode
 
@@ -265,22 +267,6 @@ Settings are grouped into **System**, **Display**, **Reader**, **Controls**, **L
 
 - **Refresh Frequency**: Set how often the screen does a full refresh while reading to reduce ghosting; options are every 1, 5, 10, 15, or 30 pages.
 
-- **UI Theme**: Set which UI theme to use:
-  
-  - "Classic" - The original Crosspoint theme
-  - "Lyra" - The new theme for Crosspoint featuring rounded elements and menu icons
-  - "Lyra Extended" - Lyra, but displays 3 books instead of 1 on the **[Home Screen](#31-home-screen)**
-  - "RoundedRaff" - A rounded theme with additional visual styling
-  - "Cover Grid" - The current book's cover above a grid of other recent books
-  - "GoodTheme" - Your reading goals above the current book's cover
-  
-  **Cover Grid** and **GoodTheme** both show the menu as a row of icons under
-  the cover, and appear only on devices with PSRAM. The icons are in the same
-  order as the Lyra menu: Browse Files, Library, Statistics, Plugins or OPDS
-  when set up, File Transfer, Settings. When the home shows only one cover, as
-  GoodTheme does, the side buttons also walk this row. A cover carries a
-  **To read**, **Reading**, **Read** or **Rereading** tag when one applies.
-
 - **UI Font**: Choose the font used for menus, library titles, and other interface text. See [Menu Fonts](docs/sd-card-fonts.md#menu-fonts) for supported files and sizes.
 
 - **Sunlight Fading Fix**: Configure whether to enable a software-fix for the issue where white X4 models may fade when used in direct sunlight:
@@ -386,11 +372,11 @@ Side buttons, and Taps and gestures where supported by the device. See the
 
 - **Use book metadata**: Read the title and author stored inside each book when the Library index is rebuilt. When disabled or unavailable, the Library uses the filename.
 
-- **Reading Goals**: Set your own reading targets. Each row steps through a list of values and then back to **Off**, so you can turn a goal off by pressing through to the end of its list. You can set minutes a day, minutes a week, a number of days in a row to keep, and books finished this calendar year (from 1 up). A book counts once per year: finishing it again in a later year counts again for that year, but reading it twice in one year counts once. Goals do not measure anything new. They use the same figures as the Statistics screen, so a goal you set today already counts the reading already recorded. Progress appears on the **GoodTheme** theme and, for the daily goal, on the **Stats + Wallpaper** sleep screen. Because every goal is measured against a date, they only count once the clock has been set.
+- **Reading Goals**: Set your own reading targets. Each row steps through a list of values and then back to **Off**, so you can turn a goal off by pressing through to the end of its list. You can set minutes a day, minutes a week, a number of days in a row to keep, and books finished this calendar year (from 1 up). A book counts once per year: finishing it again in a later year counts again for that year, but reading it twice in one year counts once. Goals do not measure anything new. They use the same figures as the Statistics screen, so a goal you set today already counts the reading already recorded. Progress appears on the **[Home Screen](#31-home-screen)** and, for the daily goal, on the **Stats + Wallpaper** sleep screen. Because every goal is measured against a date, they only count once the clock has been set.
 
 - **Statistics → Years**: One review per year: reading time, books finished, days read, longest streak, best month and the books themselves. Each year is shown against the yearly book goal it had, which is recorded when you change the goal or open Statistics; years from before this was recorded show `--`. Reading time is kept for the last two years only, so older years show their books but not their time.
 
-- **Profiles**: Keep more than one reader on one device. Each profile has its own reading positions, statistics, goals, recent books, finished books, reading queue, yearly goal history, awards, bookmarks and clippings, and its own reading preferences — font, margins, line height and theme. Wi-Fi, plugins, the library index and the catalogue servers stay shared. The device starts with a single profile and nothing changes until you add a second one; the first profile keeps using the files it always had, so nothing is moved. Deleting a profile deletes its data, and asks first.
+- **Profiles**: Keep more than one reader on one device. Each profile has its own reading positions, statistics, goals, recent books, finished books, reading queue, yearly goal history, awards, bookmarks and clippings, and its own reading preferences — font, margins and line height. Wi-Fi, plugins, the library index and the catalogue servers stay shared. The device starts with a single profile and nothing changes until you add a second one; the first profile keeps using the files it always had, so nothing is moved. Deleting a profile deletes its data, and asks first.
 
 - **Refresh Library** (**Settings → Library**): Rescan the SD card for books while preserving the arrival history of books already in the index.
 

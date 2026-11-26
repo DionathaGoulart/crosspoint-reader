@@ -83,37 +83,21 @@ an image.
 
 ## Leaving the home screen
 
-`LEFT` then `ENTER` reaches Settings from a fresh boot on every theme, so that
-is what the example below uses. The reason differs by theme, and the difference
-is worth knowing before writing any other home-screen script.
+`LEFT` then `ENTER` reaches Settings from a fresh boot, so that is what the
+example below uses.
 
-On the **cover-grid homes** (`uiTheme` Cover Grid or GoodTheme, which the code
-calls Goals Home) the four keys
-are split into two bands rather than one list: `UP`/`DOWN` walk the covers, and
-`LEFT`/`RIGHT` walk the row of destinations -- Files, Library, Statistics, the
-conditional Plugins/OPDS slot, File Transfer, Settings. A `LEFT` or `RIGHT`
-press while the selection is still on a cover jumps into the destination band
-first, and `LEFT` enters it at the *last* entry, which is Settings.
-`cycleBand()` in `src/activities/home/HomeActivity.cpp` is where that happens.
+The home splits the keys into two bands. `LEFT`/`RIGHT` walk the row of
+destinations -- Files, Library, Statistics, the conditional Plugins/OPDS slot,
+File Transfer, Settings. A `LEFT` or `RIGHT` press while the selection is on
+the book jumps into that row first, and `LEFT` enters it at the *last* entry,
+which is Settings. `UP`/`DOWN` walk the whole row: the book, then every
+destination. `cycleBand()` in `src/activities/home/HomeActivity.cpp` is where
+that happens.
 
-That slot is why `RIGHT` is the wrong way round to count: it enters the band at
+That slot is why `RIGHT` is the wrong way round to count: it enters the row at
 the *first* entry, and whether Plugins or OPDS sits at position 3 depends on
 `pluginsEnabled` and on whether a catalogue server is saved, so the number of
 presses to any given destination is not fixed.
-
-On the **default Lyra home** there is one flat ring instead, and `LEFT` is
-`NavPrevious` (so is `UP`), which wraps from the first entry to the last --
-again Settings.
-
-When the home shows one cover or none (always on GoodTheme, or Cover Grid with
-a single recent book), `UP`/`DOWN` walk the whole row instead: cover, then
-every destination.
-
-So the trap is specific to Cover Grid with two or more recent books: there,
-`UP` stays in the cover band and `ENTER` opens a book, and the run then sits in the reader while the
-rest of the script presses keys at it. On the Lyra home the same script reaches
-Settings. `fs_/.crosspoint/settings.json` is reused between runs and carries
-`uiTheme`, so which of these applies depends on what the last run left behind.
 
 ## Worked example
 

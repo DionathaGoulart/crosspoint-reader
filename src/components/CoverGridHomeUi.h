@@ -10,20 +10,16 @@
 #include "UiAppHost.h"
 #include "components/bars/tab-bar.h"
 #include "components/media/book-card.h"
-#include "components/media/cover-grid.h"
 #include "stats/ShelfStatus.h"
 #include "stats/StatsView.h"
 
+// The GoodTheme home: the reader's goals above the current book. With PSRAM the
+// book is its cover; without it, a text card (the cover cache needs PSRAM).
 class CoverGridHomeUi final : public UiAppHost {
  public:
   static constexpr int THUMB_HEIGHT = 400;
-  static constexpr int GRID_COLUMNS = 3;
-  static constexpr int GRID_ROWS = 2;
-  static constexpr int MAX_BOOKS = 1 + GRID_COLUMNS * GRID_ROWS;
-  // Books this home actually draws. The goals variant shows one cover and a
-  // strip of targets, so loading a grid's worth would generate thumbnails
-  // nobody sees and let the side keys select books that are not on screen.
-  static int bookSlots();
+  // The home shows one book: the one being read.
+  static constexpr int MAX_BOOKS = 1;
   static_assert(MAX_BOOKS <= HomeCoverCache::MAX_COVERS);
   // Tab positions the home's strip can draw, in the order of
   // HomeActivity::indexToMenuItem(). HomeActivity static_asserts its own
@@ -49,15 +45,13 @@ class CoverGridHomeUi final : public UiAppHost {
   void draw(UiScreen& screen);
   void drawHeaderBand();
   void drawEmpty(UiScreen& screen);
-  // coverColumns is how many of these covers the width must hold: the grid
-  // home fits three, the goals home gives the single cover half the screen.
-  void drawCurrent(UiScreen& screen, freeink::ui::Rect rect, int coverRowHeight, int coverColumns);
-  void drawGrid(UiScreen& screen);
-  // Goals home only: the reader's targets, where the grid of other books goes.
+  void drawCurrent(UiScreen& screen, freeink::ui::Rect rect);
+  void drawCurrentText(UiScreen& screen, freeink::ui::Rect rect);
+  void drawSelectionBar(UiScreen& screen, freeink::ui::Rect rect, int16_t height);
+  // The reader's targets, above the current book.
   void drawGoals(UiScreen& screen, freeink::ui::Rect rect);
   // Height drawGoals needs for the goals currently set.
   int goalsStripHeight(UiScreen& screen);
-  freeink::ui::Rect layoutGrid(freeink::ui::Rect rect);
   void drawTabs(UiScreen& screen, freeink::ui::Rect rect);
   bool paintFramedCover(freeink::ui::DrawTarget& target, freeink::ui::Rect rect, size_t index);
   void refreshCoverPath(size_t index);
@@ -77,17 +71,17 @@ class CoverGridHomeUi final : public UiAppHost {
   int progress = -1;
   SlotTab slotTab = SlotTab::NONE;
   bool hasContinueReading = false;
-  // Goals home: the figures the targets are measured against, read once in
-  // begin(). Only the Summary is kept -- statsService::load() also builds a
-  // ~22 KB aggregate, and holding that for the life of the home screen to
-  // redraw four bars would be the most expensive thing on it.
-  bool goalsMode = false;
+  // Fixed for the device: PSRAM is either there or not.
+  bool showCovers = false;
+  // The figures the targets are measured against, read once in begin(). Only
+  // the Summary is kept -- statsService::load() also builds a ~22 KB
+  // aggregate, and holding that for the life of the home screen to redraw
+  // four bars would be the most expensive thing on it.
   stats::Summary summary{};
+  bool summaryLoaded = false;
   char progressText[12]{};
   // Component styles and interaction tables stay off the render task's stack.
   freeink::ui::BookCardProps card;
-  freeink::ui::CoverGridProps grid;
-  freeink::ui::Rect gridBounds{};
   freeink::ui::TabBarProps tabs;
   // Six tab positions: see drawTabs(), which pairs them with
   // HomeActivity::indexToMenuItem(). One is skipped when the reader has

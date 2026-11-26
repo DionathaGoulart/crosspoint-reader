@@ -30,10 +30,7 @@ void SettingsListActivity::onEnter() {
   rebuildRows();
 }
 
-void SettingsListActivity::onExit() {
-  UiListActivity::onExit();
-  UITheme::getInstance().reload();  // Re-apply theme in case it was changed
-}
+void SettingsListActivity::onExit() { UiListActivity::onExit(); }
 
 void SettingsListActivity::loop() {
   if (pendingSection != SettingsSection::End) {

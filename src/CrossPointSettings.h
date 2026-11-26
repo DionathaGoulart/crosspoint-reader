@@ -210,19 +210,6 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
     LONG_PRESS_BUTTON_BEHAVIOR_COUNT
   };
 
-  // UI Theme
-  // Append only: the value is persisted in settings.json, so renumbering an
-  // existing theme would move every reader to a different one.
-  //
-  // GOALS_HOME is this fork's and takes upstream's next free number, which is a
-  // known merge hazard: if upstream ever adds a theme at 5, every settings.json
-  // here points at theirs and the reader has to pick the theme again. A
-  // fork-reserved number would avoid it, but uiTheme is an ENUM in the generic
-  // settings loop, which clamps anything at or above the label count back to
-  // the default -- so a sparse value needs uiTheme lifted out of that loop
-  // entirely. Not worth that for a one-time, recoverable reselection.
-  enum UI_THEME { CLASSIC = 0, LYRA = 1, LYRA_3_COVERS = 2, ROUNDEDRAFF = 3, COVER_GRID = 4, GOALS_HOME = 5 };
-
   // Image rendering in EPUB reader. IMAGES_DISPLAY_BW lays images out like
   // IMAGES_DISPLAY but draws them as a B/W dither, so image pages skip the
   // extra grayscale refresh.
@@ -372,7 +359,6 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
   // Defaults to Disabled so shortcut-based bookmark toggling remains opt-in.
   uint8_t longPressMenuFunction = LP_MENU_DISABLED;
   // UI Theme
-  uint8_t uiTheme = LYRA;
   // Sunlight fading compensation
   uint8_t fadingFix = 0;
   // The fading fix compensates the X4/X3 grayscale waveforms; other boards never get it.

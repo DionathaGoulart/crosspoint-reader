@@ -177,9 +177,10 @@ void SettingsActivity::rebuildSettings() {
     if (section == SettingsSection::Controls && setting.valuePtr == &CrossPointSettings::longPressButtonBehavior) {
       setting.nameId = StrId::STR_PAGE_TURN_LONG_PRESS;
     }
-    const bool isUiTheme = setting.nameId == StrId::STR_UI_THEME;
+    // UI Font follows Refresh Frequency, where the theme picker used to be.
+    const bool beforeUiFont = setting.key && std::strcmp(setting.key, "refreshFrequency") == 0;
     settings.push_back(std::move(setting));
-    if (isUiTheme) addAction(SettingsSection::Display, StrId::STR_UI_FONT, SettingAction::UiFont);
+    if (beforeUiFont) addAction(SettingsSection::Display, StrId::STR_UI_FONT, SettingAction::UiFont);
   }
 
   if (section == SettingsSection::Controls && controlsGroup == ControlsGroup::Front) {
@@ -279,18 +280,6 @@ void SettingsActivity::activateIndex(const int index) {
   requestUpdate();
 }
 
-void SettingsActivity::applyUiSettingChange(uint8_t CrossPointSettings::* valuePtr) {
-  // Theme changes take effect immediately, on this screen — reload the theme
-  // and re-derive the app's tokens so the very next repaint is in the new look.
-  if (valuePtr != &CrossPointSettings::uiTheme) {
-    return;
-  }
-  UITheme::getInstance().reload();
-  // Re-derive the shared tokens for the new look; the gate stays closed until
-  // the repaint that rebuilds the interaction table in the new layout.
-  resetUi();
-}
-
 bool SettingsActivity::handleCustomInput() {
   return optionPopup.handleInput(mappedInput, [this] { requestUpdate(); });
 }
@@ -326,7 +315,6 @@ void SettingsActivity::toggleSelectedSetting() {
                          syncQuickResumeTimeoutForSleepScreen(sleepScreenChanged, quickResumeTimeoutChanged);
                          SETTINGS.saveToFile();
                          rebuildSettings();
-                         applyUiSettingChange(valuePtr);
                        });
       requestUpdate();
       return;
@@ -597,9 +585,7 @@ void SettingsActivity::toggleSelectedSetting() {
 
   syncQuickResumeTimeoutForSleepScreen(sleepScreenChanged, quickResumeTimeoutChanged);
   SETTINGS.saveToFile();
-  const auto valuePtr = setting.valuePtr;  // rebuildSettings() replaces `setting`
   rebuildSettings();
-  applyUiSettingChange(valuePtr);
   // Rows can appear/disappear with a change (e.g. the footnote-back toggle).
   nav.selected = std::min(selectedSetting, static_cast<int>(settings.size()) - 1);
 }

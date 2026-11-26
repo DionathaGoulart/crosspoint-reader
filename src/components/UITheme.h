@@ -3,12 +3,10 @@
 #include <EpdFontFamily.h>
 
 #include <functional>
-#include <memory>
 
 #include "CrossPointSettings.h"
 #include "components/themes/BaseTheme.h"
-
-class CoverGridHomeUi;
+#include "components/themes/lyra/LyraTheme.h"
 
 class UITheme {
   // Static instance
@@ -21,7 +19,7 @@ class UITheme {
   static UITheme& getInstance() { return instance; }
 
   const ThemeMetrics& getMetrics() const;
-  const BaseTheme& getTheme() const { return currentTheme ? *currentTheme : fallbackTheme; }
+  const BaseTheme& getTheme() const { return theme; }
   // The drawable content area: full screen minus the board's viewable insets
   // (bezel / rounded-corner clearance from BoardConfig::ACTIVE.viewableInsets,
   // oriented to the current rotation). THE single place activities should get
@@ -41,14 +39,9 @@ class UITheme {
                                       int maxLines, bool black = true,
                                       EpdFontFamily::Style style = EpdFontFamily::REGULAR,
                                       TextVerticalAlignment verticalAlignment = TextVerticalAlignment::CENTER);
+  // PSRAM holds the cover caches. Without it, Home shows the current book as
+  // text and the Library has no cover view.
   static bool supportsCoverGrid();
-  static bool hasCoverGridHome();
-  // True for the cover home variant that shows reading goals instead of a
-  // grid of other books.
-  static bool hasGoalsHome();
-  static void drawCoverGridHome(CoverGridHomeUi& home);
-  void reload();
-  void setTheme(CrossPointSettings::UI_THEME type);
   static std::string getCoverThumbPath(std::string coverBmpPath, int coverHeight);
   static UIIcon getFileIcon(const std::string& filename);
   static int getStatusBarHeight();
@@ -56,9 +49,8 @@ class UITheme {
   static int getReaderStatusBarHeight();
 
  private:
-  BaseTheme fallbackTheme;
-  const ThemeMetrics* currentMetrics = &BaseMetrics::values;
-  std::unique_ptr<BaseTheme> currentTheme;
+  // GoodTheme, the only theme. Held by value: no allocation at static init.
+  LyraTheme theme;
   mutable ThemeMetrics adjustedMetrics;
   mutable bool metricsValid = false;
   mutable bool metricsForTouch = false;
