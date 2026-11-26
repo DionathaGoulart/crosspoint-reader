@@ -128,14 +128,14 @@ The Browse Files screen acts as a file and folder browser. The full path to the 
 
 ### 3.4 Library Screen
 
-The Library indexes up to 4,096 supported books on the SD card and shows their titles and authors without requiring you to remember their folders. Its four tabs provide different views. An arrow beside the active tab shows the sort direction. A book you have finished appears only on the **Read** tab:
+The Library indexes up to 4,096 supported books on the SD card and shows their titles and authors without requiring you to remember their folders. Its four tabs provide different views. An arrow beside the active tab shows the sort direction. A book you have finished or are reading again is hidden on **Name** and shown on **Recent** and **Read**:
 
 - **Recent** shows the books you opened most recently (up to ten) at the top, followed by the rest of the library ordered by when each file arrived on the card. Down shows the newest first; up shows the oldest files first, without the opened books on top. With **Hide New Files in Recent** turned on, the tab lists only the books you opened: down shows the most recently opened first, and up shows the least recently opened first. The setting applies only while no search is active; search results include books you have not opened, and books you have finished.
-- **Name** lists books by title. Up sorts A-Z and down sorts Z-A. Titles beginning with numbers or punctuation appear under `#`; letters from non-English scripts, including Hebrew, have their own groups.
-- **To read** is your reading queue: the books you added with **Add to reading queue**, in the order you added them. A book leaves the queue when you finish it.
-- **Read** lists the books you have finished, the most recently finished first. A book you are reading again (**Read again**) moves back to Recent and Name with a **Rereading** tag until you finish it.
+- **Name** lists books by title, without finished or rereading books. A book that belongs to a series (from the book's own metadata) is listed under its series name, in series order, with unnumbered books last, and its letter group follows the series name. Up sorts A-Z and down sorts Z-A. Titles beginning with numbers or punctuation appear under `#`; letters from non-English scripts, including Hebrew, have their own groups.
+- **To read** is your reading queue: the books you added with **Add to reading queue**, in the order you added them. A finished book can be queued again to read later. A book leaves the queue when you start reading it (the first time you open an unread book), when you choose **Read again**, or when you finish it. Books being read or reread cannot be added.
+- **Read** lists the books you have finished, the most recently finished first. A book you are reading again (**Read again**) stays here and on Recent with a **Rereading** tag until you finish it.
 
-Books in the queue or being reread carry a small **To read** or **Rereading** tag, next to the title in the list or on the cover in the cover view.
+Books carry a small **To read**, **Reading**, **Read** or **Rereading** tag when one applies, next to the title in the list or on the cover in the cover view.
 
 `My Clippings.txt` and `crash_report.txt` are not listed in the Library. They remain available in the file browser.
 
@@ -144,14 +144,16 @@ On a button-only device:
 - Use **Up/Down** or **Left/Right** to move one row at a time. Hold a direction to move a page at a time.
 - Press **Confirm** to open the selected book. On a book you have finished, a popup asks **Open** (the default, back at the last page) or **Read again**.
 - Press **Back** from the book list to focus the tabs. While the tabs are focused, press **Confirm** to switch to the next tab, hold **Confirm** to reverse the sort direction, press **Up** to open Search, or press **Down** to return to the list.
-- Hold **Confirm** on a book to open its options: **Open**, **Add to reading queue** or **Remove from queue**, **Read again** (books you have finished), **Like** and **Dislike**, **Group by letter** (Name tab), **Remove from Recents** (opened books only), **Delete**, and **Refresh Library**.
+- Hold **Confirm** on a book to open its options: **Open**, **Add to reading queue** or **Remove from queue**, **Read again** (books you have finished), **Like** and **Dislike**, **Group by letter** (Name tab), **Browse by series**, **Browse by genre**, **Remove from Recents** (opened books only), **Delete**, and **Refresh Library**.
+- When you reach the end of a book you have not rated, a popup asks **Did you like this book?** (**Liked**, **Disliked** or **Not now**). It sets the same rating as **Like** and **Dislike**.
 - **Read again** (from this popup or the options menu) returns the book to its first page and is what makes the next finish count as another reading. Without it, paging to the end of a book you have already finished changes nothing — so you can reread a passage of an old favourite without it counting.
+- **Browse by series** and **Browse by genre** list up to 128 series or genres in the library, each with its book count. Pick one to see all its books on the current tab, read or not; press **Back** to return to the full list. Series and genre come from the book's own metadata (for a genre, its first `dc:subject`), so a book without one is not listed.
 - On the Name tab, **Group by letter** collapses the list to its letter groups. The matching group remains selected. Press **Confirm** to enter a group, or **Back** to restore the exact book and position you came from.
 - Press **Back** to clear an active search.
 
 On a touch device, tap tabs, books, and the Search icon directly. Tap the active tab again to reverse its sort direction. Swipe up or down to scroll. Long-press a book to open its options; after **Group by letter**, tap a group to expand it. Swipe a row sideways to reveal a delete button. Tap the refresh icon in the header to rebuild the index.
 
-The index is created automatically the first time the Library is opened, and it is rebuilt after books are added through file transfer. To pick up other file changes or updated metadata, choose **Refresh Library** from any book's options, or tap the refresh icon on a touch device. **Settings → Library → Refresh Library** does the same from any device, including when the Library shows no books. The **Use Book Metadata** setting controls whether the index reads titles and authors stored inside books.
+The index is created automatically the first time the Library is opened, and it is rebuilt after books are added through file transfer. To pick up other file changes or updated metadata, choose **Refresh Library** from any book's options, or tap the refresh icon on a touch device. **Settings → Library → Refresh Library** does the same from any device, including when the Library shows no books. The **Use Book Metadata** setting controls whether the index reads titles, authors, series and genre stored inside books. The first time you open the Library after this update, it rebuilds and reads every book again.
 
 **Show Covers in Library** (Settings → Library) replaces the list of names with a shelf of cover art, four covers to a page, two to a row, with the title under each one. Every tab keeps its order, but the shelf does not draw the letter headings that the list view shows. The first time you open each page of the shelf, the reader pauses for a moment while it builds the covers. After that it reads them from the cache. This option needs a device with PSRAM and is not shown on devices without one.
 
@@ -222,7 +224,7 @@ Settings are grouped into **System**, **Display**, **Reader**, **Controls**, **L
 
 - **Sleep Screen**: Which sleep screen to display when the device sleeps:
   
-  - "Dark" (default) - The default dark Crosspoint logo sleep screen
+  - "Dark" (default) - The default dark GoodReader logo sleep screen
   - "Light" - The same default sleep screen, on a white background
   - "Custom" - Custom images from the SD card; see [Sleep Screen](#37-sleep-screen) below for more information
   - "Cover" - The book cover image
@@ -232,7 +234,7 @@ Settings are grouped into **System**, **Display**, **Reader**, **Controls**, **L
   - "Transparent" - A transparent overlay image drawn over the current screen; see [Sleep Screen](#37-sleep-screen) below for more information
   - "Cover + Transparent" - The transparent overlay image drawn over the cover of the last opened book, falls back to "Transparent" behavior if there is no book cover
   - "Stats" - Your reading figures and a grid of the last 30 days, with one square filled for each day you read. Falls back to "Dark" when nothing has been recorded yet
-  - "Stats + Wallpaper" - A custom image from the SD card with a narrow band of figures along the bottom: your reading streak, today's reading, and the battery level. When a daily goal is set, today's reading is shown against it with a progress bar; otherwise it is shown on its own. The streak and today's reading stay at zero until the clock has been set. With no image on the card this falls back to the "Stats" screen, and with no reading recorded yet to "Custom".
+  - "Stats + Wallpaper" - A custom image from the SD card with a narrow band of figures along the bottom: your reading streak, today's reading, and the battery level, on a strip in the tone of the image's bottom edge (light or dark). When a daily goal is set, today's reading is shown against it with a progress bar; otherwise it is shown on its own. The streak and today's reading stay at zero until the clock has been set. With no image on the card this falls back to the "Stats" screen, and with no reading recorded yet to "Custom".
 - **Sleep Screen Cover Mode**: How to display the book cover or custom sleep image:
   
   - "Fit" (default) - Scale the image to fit centered on the screen, padding with white borders as necessary
@@ -277,7 +279,7 @@ Settings are grouped into **System**, **Display**, **Reader**, **Controls**, **L
   order as the Lyra menu: Browse Files, Library, Statistics, Plugins or OPDS
   when set up, File Transfer, Settings. When the home shows only one cover, as
   GoodTheme does, the side buttons also walk this row. A cover carries a
-  **To read**, **Read** or **Rereading** tag when one applies.
+  **To read**, **Reading**, **Read** or **Rereading** tag when one applies.
 
 - **UI Font**: Choose the font used for menus, library titles, and other interface text. See [Menu Fonts](docs/sd-card-fonts.md#menu-fonts) for supported files and sizes.
 
@@ -607,8 +609,8 @@ The **Sleep Screen** setting controls what is displayed when the device goes to 
 
 | Mode               | Behavior                                                                                                                     |
 | ------------------ | ---------------------------------------------------------------------------------------------------------------------------- |
-| **Dark** (default) | The CrossPoint logo on a dark background.                                                                                    |
-| **Light**          | The CrossPoint logo on a white background.                                                                                   |
+| **Dark** (default) | The GoodReader logo on a dark background.                                                                                      |
+| **Light**          | The GoodReader logo on a white background.                                                                                     |
 | **Custom**         | A custom image from the SD card (see below). Falls back to **Dark** if no custom image is found.                             |
 | **Cover**          | The cover of the currently open book. Falls back to **Dark** if no book is open.                                             |
 | **Cover + Custom** | The cover of the currently open book, shown only while actively reading. Falls back to **Custom** behavior when not reading. |

@@ -22,6 +22,7 @@
 #include "activities/RenderLock.h"
 #include "stats/FinishedBooksStore.h"
 #include "stats/ReadingQueueStore.h"
+#include "stats/ShelfStatus.h"
 #include "sync/ReadingSessionLog.h"
 #include "util/PluginEvents.h"
 
@@ -98,12 +99,24 @@ void ReaderActivity::rememberBookOnceRendered() {
   APP_STATE.openEpubPath = bookPath;
   APP_STATE.saveToFile();
   RECENT_BOOKS.addBook(bookPath, getBookTitle(), getBookAuthor(), getBookThumbBmpPath());
+  // A book being read or reread is no longer waiting in the queue. A finished
+  // book opened to check a page stays queued.
+  // Most books are not queued: skip loading the finished-books store for them.
+  READING_QUEUE.ensureLoaded();
+  if (READING_QUEUE.contains(bookPath)) {
+    const bool finishedWasLoaded = FINISHED_BOOKS.isLoaded();
+    FINISHED_BOOKS.ensureLoaded();
+    const shelfstatus::Tag tag = shelfstatus::forPath(bookPath);
+    if (tag == shelfstatus::Tag::Reading || tag == shelfstatus::Tag::Rereading) READING_QUEUE.remove(bookPath);
+    if (!finishedWasLoaded) FINISHED_BOOKS.reset();
+  }
   const pluginevents::Var openVars[] = {{"book", bookPath.c_str()}};
   pluginevents::emit(pluginevents::Event::ReaderOpen, openVars, 1);
 }
 
 void ReaderActivity::onExit() {
   Activity::onExit();
+  ratingPopup.dismiss();
 
   // The first page can finish rendering after the last reader loop.
   rememberBookOnceRendered();
@@ -142,6 +155,7 @@ void ReaderActivity::prepareForSleep() { flushReaderSession(); }
 void ReaderActivity::recordFinishedIfAtEnd(const bool atEnd) {
   if (!atEnd) {
     finishedRecorded = false;
+    ratingPopup.dismiss();
     return;
   }
   if (finishedRecorded) return;
@@ -156,8 +170,34 @@ void ReaderActivity::recordFinishedIfAtEnd(const bool atEnd) {
   // A finished book leaves the "to read" list; it is on the Read shelf now.
   if (finishedbooks::recordFinished(bookPath, getBookTitle(), getBookAuthor(), getBookLanguage())) {
     READING_QUEUE.remove(bookPath);
+    askRating();
   }
   finishedRecorded = true;
+}
+
+void ReaderActivity::askRating() {
+  const std::string document = finishedbooks::documentIdFor(bookPath);
+  if (document.empty()) return;
+  FINISHED_BOOKS.ensureLoaded();
+  const FinishedBook* record = FINISHED_BOOKS.find(document);
+  if (record != nullptr && record->rating != 0) return;
+  const std::string title = getBookTitle();
+  const char* options[] = {tr(STR_BOOK_LIKED), tr(STR_BOOK_DISLIKED), tr(STR_RATE_SKIP)};
+  // The render task may be drawing the end screen: fill the popup under the lock.
+  RenderLock lock(*this);
+  ratingPopup.show(tr(STR_RATE_PROMPT), title.c_str(), options, 3, 0, [this, document, title](const int choice) {
+    if (choice == 0 || choice == 1) {
+      FINISHED_BOOKS.setRating(document, bookPath, title, getBookAuthor(), std::string(), choice == 0 ? 1 : -1);
+    }
+    requestUpdate();
+  });
+  requestUpdate();
+}
+
+bool ReaderActivity::handleRatingPopup() {
+  if (!ratingPopup.isActive()) return false;
+  ratingPopup.handleInput(mappedInput, [this] { requestUpdate(); });
+  return true;
 }
 
 void ReaderActivity::flushReaderSession() {
@@ -259,6 +299,7 @@ bool ReaderActivity::handleEndOfBookPageTurn(const bool prevTriggered, const boo
 }
 
 void ReaderActivity::loop() {
+  if (handleRatingPopup()) return;
   rememberBookOnceRendered();
   clearEndOfBookOptionsIfNeeded();
   recordFinishedIfAtEnd(isAtEndOfBook());
@@ -298,6 +339,7 @@ void ReaderActivity::render(RenderLock&&) {
       endOfBookOptionsReady.store(true, std::memory_order_release);
       endOfBookOptions->render(renderer, mappedInput);
     }
+    if (ratingPopup.isActive()) ratingPopup.render(renderer);
     renderer.displayBuffer();
     onEndOfBookRendered();
     markPageRendered();

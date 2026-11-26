@@ -208,6 +208,14 @@ class LibraryListActivity final : public UiTabListActivity, private LibraryCover
   // book at most (8 KiB at CLIX_MAX_RECORDS), allocated fallibly per filter,
   // and only when a row can be hidden; see identityRows.
   std::string query;
+  // A series or genre picked from the options menu: the list shows only its
+  // books. Cleared by Back, like the search. The folded name is what matches.
+  enum class Collection : uint8_t { None, Series, Genre };
+  Collection collectionKind = Collection::None;
+  std::string collectionName;
+  std::string collectionFold;
+  void openCollectionPicker(Collection kind);
+  bool inCollection(const library::ClixRecord& record);
   // The active query, pre-quoted for the header: headerTitle() returns a
   // stable c_str the render task can hold across a build.
   std::string headerSearchTitle;
@@ -220,6 +228,7 @@ class LibraryListActivity final : public UiTabListActivity, private LibraryCover
 
   ShelfSet readSet;
   ShelfSet rereadSet;
+  ShelfSet readingSet;
   ShelfSet queueSet;
 
   // One start row per group. Grouping is only offered for the sorted <=512-book

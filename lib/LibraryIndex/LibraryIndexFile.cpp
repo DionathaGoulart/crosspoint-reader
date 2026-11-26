@@ -11,6 +11,12 @@
 
 namespace library {
 
+namespace {
+// Author, title, source author, series and genre: up to 129 + 256 + 129 + 65 + 33.
+constexpr uint8_t BLOB_FIELD_COUNT = 5;
+constexpr size_t BLOB_CHUNK_BYTES = 640;
+}  // namespace
+
 LibraryIndexFile::~LibraryIndexFile() { close(); }
 
 bool LibraryIndexFile::open(const char* path) { return openImpl(path, false); }
@@ -157,11 +163,12 @@ bool LibraryIndexFile::readRecord(const uint16_t ordinal, ClixRecord& out) {
 
   // Clamp here, at the single point every record enters the program. These
   // lengths come off an SD card that the user can write to and that can rot: a
-  // foldLen of 255 against a 96-byte field sends a string_view 159 bytes past the
+  // foldLen of 255 against an 80-byte field sends a string_view 175 bytes past the
   // end of the record, and callers build views from them without looking. Fixing
   // it at each call site would mean fixing it again at the next one.
   out.foldLen = static_cast<uint8_t>(std::min<size_t>(out.foldLen, CLIX_FOLD_BYTES));
   out.authorKeyLen = static_cast<uint8_t>(std::min<size_t>(out.authorKeyLen, CLIX_AUTHOR_KEY_BYTES));
+  out.seriesKeyLen = static_cast<uint8_t>(std::min<size_t>(out.seriesKeyLen, CLIX_SERIES_KEY_BYTES));
   if (out.metadataStatus > CLIX_METADATA_FAILED) return false;
   // nameOff is u32 and every reader adds a length to it before comparing against
   // the section size. A forged value near the top of the range wraps that sum and
@@ -194,27 +201,42 @@ bool LibraryIndexFile::readPathHash(const ClixRecord& record, uint64_t& out) {
   return readAt(head.nameStart + record.nameOff, &out, sizeof(out));
 }
 
-bool LibraryIndexFile::readBlobField(const ClixRecord& record, const uint8_t field, std::string& out) {
-  out.clear();
+// One read for the whole run of length-prefixed fields that follows the name,
+// then the lengths are walked in memory. The fields total at most 612 bytes, so
+// the chunk always covers them; walking them with a seek and a read per length
+// byte cost about five SD calls per field. `wantMask` bit i keeps field i.
+bool LibraryIndexFile::readBlobFields(const ClixRecord& record, const uint8_t count, const uint8_t wantMask,
+                                      std::string* out) {
+  for (uint8_t i = 0; i < count; i++) out[i].clear();
   if (!opened || record.nameLen == 0) return false;
   if (record.nameOff > head.nameLen || sizeof(uint64_t) > head.nameLen - record.nameOff ||
       record.nameLen > head.nameLen - record.nameOff - sizeof(uint64_t))
     return false;
 
-  uint32_t at = record.nameOff + sizeof(uint64_t) + record.nameLen;
-  for (uint8_t i = 0; i <= field; i++) {
-    if (at >= head.nameLen) return false;
-    uint8_t len = 0;
-    if (!readAt(head.nameStart + at, &len, sizeof(len))) return false;
-    ++at;
-    if (len > head.nameLen - at) return false;
-    if (i == field) {
-      out.resize(len);
-      return len == 0 || readAt(head.nameStart + at, out.data(), len);
-    }
-    at += len;
+  const uint32_t at = record.nameOff + sizeof(uint64_t) + record.nameLen;
+  if (at >= head.nameLen) return false;
+  uint8_t buf[BLOB_CHUNK_BYTES];
+  const size_t have = std::min<size_t>(head.nameLen - at, sizeof(buf));
+  if (!readAt(head.nameStart + at, buf, have)) return false;
+
+  size_t pos = 0;
+  for (uint8_t i = 0; i < count; i++) {
+    if (pos >= have) return false;
+    const size_t len = buf[pos++];
+    if (len > have - pos) return false;
+    if ((wantMask & (1u << i)) != 0 && len > 0) out[i].assign(reinterpret_cast<const char*>(buf + pos), len);
+    pos += len;
   }
-  return false;
+  return true;
+}
+
+bool LibraryIndexFile::readBlobField(const ClixRecord& record, const uint8_t field, std::string& out) {
+  out.clear();
+  if (field >= BLOB_FIELD_COUNT) return false;
+  std::string fields[BLOB_FIELD_COUNT];
+  if (!readBlobFields(record, static_cast<uint8_t>(field + 1), static_cast<uint8_t>(1u << field), fields)) return false;
+  out = std::move(fields[field]);
+  return true;
 }
 
 bool LibraryIndexFile::readAuthor(const ClixRecord& record, std::string& out) {
@@ -229,6 +251,16 @@ bool LibraryIndexFile::readTitle(const ClixRecord& record, std::string& out) {
 
 bool LibraryIndexFile::readSourceAuthor(const ClixRecord& record, std::string& out) {
   return readBlobField(record, 2, out);
+}
+
+// Series name and genre, the blob fields after the source author. Empty for a
+// book with none.
+bool LibraryIndexFile::readSeries(const ClixRecord& record, std::string& out) {
+  return readBlobField(record, 3, out) && !out.empty();
+}
+
+bool LibraryIndexFile::readGenre(const ClixRecord& record, std::string& out) {
+  return readBlobField(record, 4, out) && !out.empty();
 }
 
 bool LibraryIndexFile::readFolderPath(const uint16_t folderId, std::string& out) {

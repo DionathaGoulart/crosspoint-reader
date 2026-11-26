@@ -766,6 +766,7 @@ void EpubReaderActivity::loop() {
     return;
   }
 
+  if (handleRatingPopup()) return;
   rememberBookOnceRendered();
 
   // The radio stopped for a chapter build: once the render task has let go of the lock, that page

@@ -12,11 +12,13 @@
 // book that has not moved on the card.
 namespace shelfstatus {
 
-enum class Tag : uint8_t { None, Queued, Read, Rereading };
+enum class Tag : uint8_t { None, Queued, Reading, Read, Rereading };
 
-// The one precedence rule: a reread beats read, and read beats queued.
-constexpr Tag classify(const bool rereading, const bool read, const bool queued) {
-  return rereading ? Tag::Rereading : read ? Tag::Read : queued ? Tag::Queued : Tag::None;
+// The one precedence rule: rereading, then read, then reading, then queued.
+// "Reading" is an opened book that is not finished; a finished book opened
+// again to check a page stays Read.
+constexpr Tag classify(const bool rereading, const bool read, const bool reading, const bool queued) {
+  return rereading ? Tag::Rereading : read ? Tag::Read : reading ? Tag::Reading : queued ? Tag::Queued : Tag::None;
 }
 
 // Reads the stores as they are in memory: the caller loads them first, once,

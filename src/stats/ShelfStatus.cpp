@@ -4,6 +4,7 @@
 
 #include "FinishedBooksStore.h"
 #include "ReadingQueueStore.h"
+#include "RecentBooksStore.h"
 
 shelfstatus::Tag shelfstatus::forPath(const std::string& path) {
   if (path.empty()) return Tag::None;
@@ -15,13 +16,22 @@ shelfstatus::Tag shelfstatus::forPath(const std::string& path) {
     read = book.timesRead > 0;
     break;
   }
-  return classify(rereading, read, READING_QUEUE.contains(path));
+  bool reading = false;
+  for (const RecentBook& book : RECENT_BOOKS.getBooks()) {
+    if (book.path == path) {
+      reading = true;
+      break;
+    }
+  }
+  return classify(rereading, read, reading, READING_QUEUE.contains(path));
 }
 
 const char* shelfstatus::label(const Tag tag) {
   switch (tag) {
     case Tag::Queued:
       return tr(STR_SHELF_TAG_QUEUED);
+    case Tag::Reading:
+      return tr(STR_SHELF_TAG_READING);
     case Tag::Read:
       return tr(STR_SHELF_TAG_READ);
     case Tag::Rereading:

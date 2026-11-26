@@ -191,6 +191,9 @@ TEST(LibraryFormat, ByteImageIsStableAcrossBuilds) {
   EXPECT_EQ(offsetof(ClixRecord, authorKeyLen), 14u);
   EXPECT_EQ(offsetof(ClixRecord, metadataStatus), 15u);
   EXPECT_EQ(offsetof(ClixRecord, fold), 16u);
+  EXPECT_EQ(offsetof(ClixRecord, seriesKey), 96u);
+  EXPECT_EQ(offsetof(ClixRecord, seriesIndex), 108u);
+  EXPECT_EQ(offsetof(ClixRecord, seriesKeyLen), 110u);
   EXPECT_EQ(offsetof(ClixRecord, authorKey), 112u);
   EXPECT_EQ(offsetof(ClixRecord, modificationTime), 124u);
 

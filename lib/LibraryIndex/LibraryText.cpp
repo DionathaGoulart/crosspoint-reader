@@ -398,4 +398,10 @@ std::string surnameKey(const std::string_view displayAuthor) {
   return key;
 }
 
+uint8_t genreHashOf(const std::string_view folded) {
+  uint8_t hash = 0;
+  for (const char c : folded) hash = static_cast<uint8_t>(hash * 31u + static_cast<uint8_t>(c));
+  return hash == 0 ? 1 : hash;
+}
+
 }  // namespace library

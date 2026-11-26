@@ -85,6 +85,12 @@ class LibraryIndexFile {
   // Cleaned author spelling before the library-wide spelling vote. Empty is a
   // valid value, so success is independent of `out.empty()`.
   bool readSourceAuthor(const ClixRecord& record, std::string& out);
+  // Several name-blob fields in one SD read: fills out[0..count) and keeps only
+  // the fields whose bit is set in wantMask (0 author, 1 title, 2 source author,
+  // 3 series, 4 genre). Empty is a valid value.
+  bool readBlobFields(const ClixRecord& record, uint8_t count, uint8_t wantMask, std::string* out);
+  bool readSeries(const ClixRecord& record, std::string& out);
+  bool readGenre(const ClixRecord& record, std::string& out);
 
   // Absolute path of the book, rebuilt from its folder record.
   bool readPath(const ClixRecord& record, std::string& out);

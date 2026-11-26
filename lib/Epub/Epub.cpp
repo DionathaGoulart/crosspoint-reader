@@ -104,6 +104,9 @@ bool Epub::parseContentOpf(BookMetadataCache::BookMetadata& bookMetadata, const 
   bookMetadata.title = utf8ComposeNfc(opfParser.title);
   bookMetadata.author = utf8ComposeNfc(opfParser.author);
   bookMetadata.language = opfParser.language;
+  bookMetadata.series = utf8ComposeNfc(opfParser.series);
+  bookMetadata.seriesIndex = opfParser.seriesIndex;
+  bookMetadata.genre = utf8ComposeNfc(opfParser.genre);
 
   if (metadataOnly) {
     LOG_DBG("EBP", "Successfully parsed package metadata");
@@ -651,9 +654,13 @@ bool Epub::load(const bool buildIfMissing, const bool skipLoadingCss) {
   return true;
 }
 
-bool Epub::loadMetadata(std::string& title, std::string& author) {
+bool Epub::loadMetadata(std::string& title, std::string& author, std::string* series, std::optional<float>* seriesIndex,
+                        std::string* genre) {
   title.clear();
+  if (genre) genre->clear();
   author.clear();
+  if (series) series->clear();
+  if (seriesIndex) *seriesIndex = std::nullopt;
 
   if (Txt::isTxtOrMd(filepath)) {
     title = utf8ComposeNfc(FsHelpers::getFileNameWithoutExtension(filepath));
@@ -661,7 +668,9 @@ bool Epub::loadMetadata(std::string& title, std::string& author) {
   }
 
   auto metadataCache = makeUniqueNoThrow<BookMetadataCache>(cachePath);
-  if (metadataCache && metadataCache->load()) {
+  // The reader's cache does not hold the series, so a caller that wants it
+  // reads the package file instead.
+  if (!series && !genre && metadataCache && metadataCache->load()) {
     title = metadataCache->coreMetadata.title;
     author = metadataCache->coreMetadata.author;
     return true;
@@ -684,6 +693,9 @@ bool Epub::loadMetadata(std::string& title, std::string& author) {
 
   title = std::move(metadata.title);
   author = std::move(metadata.author);
+  if (series) *series = std::move(metadata.series);
+  if (seriesIndex) *seriesIndex = metadata.seriesIndex;
+  if (genre) *genre = std::move(metadata.genre);
   return true;
 }
 

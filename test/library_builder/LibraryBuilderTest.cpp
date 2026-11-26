@@ -10,6 +10,7 @@
 #include "Epub.h"
 #include "LibraryBuilder.h"
 #include "LibraryIndexFile.h"
+#include "LibraryText.h"
 
 using namespace library;
 
@@ -304,6 +305,61 @@ TEST_F(LibraryBuilderTest, XtcTitleAndAuthorComeFromTheFile) {
   }
   EXPECT_TRUE(sawXtc);
   EXPECT_TRUE(sawXtch);
+}
+
+TEST_F(LibraryBuilderTest, SagaSortsUnderItsSeriesNameInBookOrder) {
+  fake::add("/s/c.epub");
+  fake::add("/s/a.epub");
+  fake::add("/s/b.epub");
+  fake::add("/s/z.epub");
+  bookMetadata["/s/c.epub"] = {"Mockingjay", "Collins", true, "The Hunger Games", 3.0f};
+  bookMetadata["/s/a.epub"] = {"The Hunger Games", "Collins", true, "The Hunger Games", 1.0f};
+  bookMetadata["/s/b.epub"] = {"Catching Fire", "Collins", true, "The Hunger Games", 2.0f};
+  bookMetadata["/s/z.epub"] = {"Alpha", "Other", true};
+  initial();
+
+  LibraryIndexFile index;
+  ASSERT_TRUE(index.open(INDEX));
+  std::vector<std::string> saga;
+  std::string firstOfAll;
+  for (uint16_t row = 0; row < index.bookCount(); row++) {
+    const std::string path = pathAt(index, SortOrder::TitleAsc, row);
+    if (path.rfind("/s/", 0) != 0) continue;
+    if (firstOfAll.empty()) firstOfAll = path;
+    saga.push_back(path);
+  }
+  ASSERT_EQ(saga.size(), 4u);
+  // "Alpha" sorts before the series name; the saga then follows in book order.
+  EXPECT_EQ(saga[0], "/s/z.epub");
+  EXPECT_EQ(saga[1], "/s/a.epub");
+  EXPECT_EQ(saga[2], "/s/b.epub");
+  EXPECT_EQ(saga[3], "/s/c.epub");
+}
+
+TEST_F(LibraryBuilderTest, SeriesNameAndGenreSurviveInTheIndexAndARebuild) {
+  fake::add("/g/one.epub");
+  bookMetadata["/g/one.epub"] = {"One", "Writer", true, "Harry Potter", 1.0f, "Fantasia"};
+  initial();
+  ASSERT_TRUE(buildLibraryIndex("/", stats, true));  // reuse path
+
+  LibraryIndexFile index;
+  ASSERT_TRUE(index.open(INDEX));
+  bool seen = false;
+  for (uint16_t ordinal = 0; ordinal < index.bookCount(); ordinal++) {
+    ClixRecord record{};
+    std::string path, series, genre, author;
+    ASSERT_TRUE(index.readRecord(ordinal, record));
+    ASSERT_TRUE(index.readPath(record, path));
+    if (path != "/g/one.epub") continue;
+    seen = true;
+    EXPECT_TRUE(index.readSeries(record, series));
+    EXPECT_EQ(series, "Harry Potter");
+    EXPECT_TRUE(index.readGenre(record, genre));
+    EXPECT_EQ(genre, "Fantasia");
+    EXPECT_EQ(record.genreHash, library::genreHashOf(library::fold("Fantasia")));
+    EXPECT_TRUE(index.readAuthor(record, author));
+  }
+  EXPECT_TRUE(seen);
 }
 
 TEST_F(LibraryBuilderTest, UnchangedRebuildReusesMetadataAndDoesNotReplaceIndex) {

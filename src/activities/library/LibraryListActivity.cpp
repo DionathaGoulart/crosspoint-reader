@@ -16,6 +16,8 @@
 
 #include <algorithm>
 #include <cstdio>
+#include <cstring>
+#include <memory>
 #include <vector>
 
 #include "CrossPointSettings.h"
@@ -173,14 +175,16 @@ int LibraryListActivity::selectedEntry() const {
 // oldest-first, which pinned fresh reads would contradict.
 int LibraryListActivity::pinnedCount() const {
   if (openedOnly()) return pinnedTotal;
-  if (activeTabIndex != RECENT_TAB || !query.empty() || !isDescending(sortOrder)) return 0;
+  if (activeTabIndex != RECENT_TAB || !query.empty() || collectionKind != Collection::None || !isDescending(sortOrder))
+    return 0;
   return pinnedTotal;
 }
 
 // With the setting on, the unfiltered Recent tab is the store alone, in either
 // direction. Search still covers the whole index.
 bool LibraryListActivity::openedOnly() const {
-  return SETTINGS.libraryRecentOpenedOnly != 0 && activeTabIndex == RECENT_TAB && query.empty();
+  return SETTINGS.libraryRecentOpenedOnly != 0 && activeTabIndex == RECENT_TAB && query.empty() &&
+         collectionKind == Collection::None;
 }
 
 // Store book behind a pinned entry; the ascending toggle reads the store backwards.
@@ -199,7 +203,6 @@ void LibraryListActivity::resolvePinned() {
   for (size_t i = 0; i < books.size() && pinnedTotal < RecentBooksStore::MAX_RECENT_BOOKS; i++) {
     const std::string& path = books[i].path;
     const uint64_t hash = library::clixPathHash(path.data(), path.size());
-    if (tagForHash(hash) == shelfstatus::Tag::Read) continue;
     hashes[pinnedTotal] = hash;
     pinnedStore[pinnedTotal++] = static_cast<uint8_t>(i);
   }
@@ -339,13 +342,26 @@ void LibraryListActivity::showBookOptions(const int entry) {
   // been read can be reread), and an index switch over that is the same
   // "two lists must agree by counting" hazard that put the wrong destination
   // behind the home screen's icons.
-  enum Action : uint8_t { Open, Queue, Unqueue, Reread, Like, Dislike, Group, Unpin, Delete, Rebuild };
+  enum Action : uint8_t {
+    Open,
+    Queue,
+    Unqueue,
+    Reread,
+    Like,
+    Dislike,
+    Group,
+    BrowseSeries,
+    BrowseGenre,
+    Unpin,
+    Delete,
+    Rebuild
+  };
   std::vector<const char*> options;
   std::vector<Action> actions;
-  // Reserved: nine is the most this can hold, and growing by doubling would
+  // Reserved: eleven is the most this can hold, and growing by doubling would
   // be four allocations each on a button press.
-  options.reserve(9);
-  actions.reserve(9);
+  options.reserve(11);
+  actions.reserve(11);
   const auto add = [&options, &actions](const char* label, const Action action) {
     options.push_back(label);
     actions.push_back(action);
@@ -357,13 +373,13 @@ void LibraryListActivity::showBookOptions(const int entry) {
   const bool hasBeenRead = record != nullptr && record->timesRead > 0;
   const int8_t rating = record != nullptr ? record->rating : 0;
   const bool queued = READING_QUEUE.contains(path);
+  const shelfstatus::Tag status = tagForHash(library::clixPathHash(path.data(), path.size()));
 
   add(tr(STR_OPEN), Open);
-  // A book already read is not queued: it lives on the Read tab, and
-  // rereading is the way back to it.
+  // A read book may be queued to read again. One being reread is not waiting.
   if (queued) {
     add(tr(STR_QUEUE_REMOVE), Unqueue);
-  } else if (!hasBeenRead) {
+  } else if (status != shelfstatus::Tag::Reading && status != shelfstatus::Tag::Rereading) {
     add(tr(STR_QUEUE_ADD), Queue);
   }
   // Rereading is only offered for a book already finished: on anything else it
@@ -374,6 +390,10 @@ void LibraryListActivity::showBookOptions(const int entry) {
   add(rating > 0 ? tr(STR_BOOK_UNLIKE) : tr(STR_BOOK_LIKE), Like);
   add(rating < 0 ? tr(STR_BOOK_UNDISLIKE) : tr(STR_BOOK_DISLIKE), Dislike);
   if (groupable()) add(tr(STR_LIBRARY_GROUP_BY_LETTER), Group);
+  if (collectionKind == Collection::None && !degraded) {
+    add(tr(STR_LIBRARY_BY_SERIES), BrowseSeries);
+    add(tr(STR_LIBRARY_BY_GENRE), BrowseGenre);
+  }
   if (isStoreRow) add(tr(STR_REMOVE_FROM_RECENTS), Unpin);
   add(tr(STR_DELETE), Delete);
   add(tr(STR_LIBRARY_REBUILD), Rebuild);
@@ -405,6 +425,12 @@ void LibraryListActivity::showBookOptions(const int entry) {
                        case Group:
                          collapseGroups(entry);
                          break;
+                       case BrowseSeries:
+                         openCollectionPicker(Collection::Series);
+                         break;
+                       case BrowseGenre:
+                         openCollectionPicker(Collection::Genre);
+                         break;
                        case Unpin:
                          promptRemoveRecentBook(path, title);
                          break;
@@ -416,6 +442,91 @@ void LibraryListActivity::showBookOptions(const int entry) {
                          break;
                      }
                    });
+  requestUpdate();
+}
+
+// True when the book belongs to the picked series or genre. The record's
+// folded series prefix rules out most books without an SD read.
+bool LibraryListActivity::inCollection(const library::ClixRecord& record) {
+  std::string value;
+  if (collectionKind == Collection::Series) {
+    if (record.seriesKeyLen == 0) return false;
+    const size_t prefix = std::min<size_t>(record.seriesKeyLen, collectionFold.size());
+    if (memcmp(record.seriesKey, collectionFold.data(), prefix) != 0) return false;
+    return index.readSeries(record, value) && library::fold(value) == collectionFold;
+  }
+  if (record.genreHash != library::genreHashOf(collectionFold)) return false;
+  return index.readGenre(record, value) && library::fold(value) == collectionFold;
+}
+
+// One pass over the index in title order, counting books per series or genre.
+// Capped so a card full of one-off subjects cannot grow the list without bound.
+void LibraryListActivity::openCollectionPicker(const Collection kind) {
+  struct Entry {
+    std::string fold;
+    std::string name;
+    uint16_t count;
+  };
+  constexpr size_t MAX_COLLECTIONS = 128;
+  std::vector<Entry> entries;
+  entries.reserve(32);
+  const int total = static_cast<int>(index.bookCount());
+  std::string value;
+  // The render task reads the same index file: scan under the lock.
+  RenderLock scanLock(*this);
+  for (int ordinal = 0; ordinal < total; ordinal++) {
+    if ((ordinal & 0x3F) == 0x3F) delay(1);
+    library::ClixRecord record{};
+    if (!index.readRecord(static_cast<uint16_t>(ordinal), record)) continue;
+    if (kind == Collection::Series && record.seriesKeyLen == 0) continue;
+    const bool found = kind == Collection::Series ? index.readSeries(record, value) : index.readGenre(record, value);
+    if (!found) continue;
+    const std::string key = library::fold(value);
+    if (key.empty()) continue;
+    // Newest entry first: the books of a series are usually read together.
+    Entry* hit = nullptr;
+    for (size_t i = entries.size(); i-- > 0;) {
+      if (entries[i].fold == key) {
+        hit = &entries[i];
+        break;
+      }
+    }
+    if (hit) {
+      hit->count++;
+    } else if (entries.size() < MAX_COLLECTIONS) {
+      entries.push_back(Entry{key, value, 1});
+    }
+  }
+  const char* title = kind == Collection::Series ? tr(STR_LIBRARY_BY_SERIES) : tr(STR_LIBRARY_BY_GENRE);
+  if (entries.empty()) {
+    const char* ok[] = {tr(STR_OK_BUTTON)};
+    optionPopup.showMessage(title, tr(STR_LIBRARY_NO_COLLECTIONS), ok, 1, 0, [](int) {});
+    scanLock.unlock();
+    requestUpdate();
+    return;
+  }
+  std::sort(entries.begin(), entries.end(), [](const Entry& a, const Entry& b) { return a.fold < b.fold; });
+  std::vector<std::string> labels;
+  labels.reserve(entries.size());
+  for (const Entry& e : entries) labels.push_back(e.name + " (" + std::to_string(e.count) + ")");
+  auto picked = std::make_shared<std::vector<Entry>>(std::move(entries));
+  optionPopup.show(kind == Collection::Series ? StrId::STR_LIBRARY_BY_SERIES : StrId::STR_LIBRARY_BY_GENRE,
+                   std::move(labels), 0, [this, kind, picked](const int choice) {
+                     swallowHeldReleases();
+                     if (choice < 0 || choice >= static_cast<int>(picked->size())) return;
+                     {
+                       RenderLock lock(*this);
+                       collectionKind = kind;
+                       collectionName = (*picked)[static_cast<size_t>(choice)].name;
+                       collectionFold = (*picked)[static_cast<size_t>(choice)].fold;
+                       applyFilter();
+                     }
+                     auto& nav = activeNav();
+                     nav.selected = 0;
+                     nav.top = 0;
+                     requestUpdate();
+                   });
+  scanLock.unlock();
   requestUpdate();
 }
 
@@ -456,23 +567,27 @@ void LibraryListActivity::loadShelfSets() {
   size_t rereadCount = 0;
   for (const FinishedBook& book : finished) {
     if (book.path.empty()) continue;
-    if (book.rereading) {
-      ++rereadCount;
-    } else if (book.timesRead > 0) {
-      ++readCount;
-    }
+    if (book.rereading) ++rereadCount;
+    if (book.timesRead > 0) ++readCount;
   }
   // getBooks() is newest first, so the rank orders the Read tab by finish.
   fill(readSet, readCount, [&finished](auto&& put) {
     uint16_t rank = 0;
     for (const FinishedBook& book : finished) {
-      if (!book.path.empty() && !book.rereading && book.timesRead > 0) put(book.path, rank++);
+      if (!book.path.empty() && book.timesRead > 0) put(book.path, rank++);
     }
   });
   fill(rereadSet, rereadCount, [&finished](auto&& put) {
     uint16_t rank = 0;
     for (const FinishedBook& book : finished) {
       if (!book.path.empty() && book.rereading) put(book.path, rank++);
+    }
+  });
+  const auto& recent = RECENT_BOOKS.getBooks();
+  fill(readingSet, recent.size(), [&recent](auto&& put) {
+    uint16_t rank = 0;
+    for (const RecentBook& book : recent) {
+      if (!book.path.empty()) put(book.path, rank++);
     }
   });
   fill(queueSet, queue.size(), [&queue](auto&& put) {
@@ -482,10 +597,13 @@ void LibraryListActivity::loadShelfSets() {
 }
 
 shelfstatus::Tag LibraryListActivity::tagForHash(const uint64_t hash) const {
-  return shelfstatus::classify(rereadSet.find(hash) >= 0, readSet.find(hash) >= 0, queueSet.find(hash) >= 0);
+  return shelfstatus::classify(rereadSet.find(hash) >= 0, readSet.find(hash) >= 0, readingSet.find(hash) >= 0,
+                               queueSet.find(hash) >= 0);
 }
 
-bool LibraryListActivity::anyShelfStatus() const { return readSet.count + rereadSet.count + queueSet.count > 0; }
+bool LibraryListActivity::anyShelfStatus() const {
+  return readSet.count + rereadSet.count + readingSet.count + queueSet.count > 0;
+}
 
 void LibraryListActivity::refreshShelf() {
   {
@@ -760,6 +878,9 @@ uint32_t LibraryListActivity::titleInitialFor(const int entry) {
   const uint16_t ordinal = index.ordinalForRow(sortOrder, static_cast<uint16_t>(rowFor(entry)));
   library::ClixRecord record{};
   if (ordinal == 0xFFFF || !index.readRecord(ordinal, record)) return 0;
+  // A saga sits under its series name, so its letter is the series' letter.
+  if (record.seriesKeyLen > 0)
+    return library::foldedGroupInitial(std::string_view(record.seriesKey, record.seriesKeyLen));
   return library::foldedGroupInitial(std::string_view(record.fold, record.foldLen));
 }
 
@@ -841,11 +962,13 @@ void LibraryListActivity::applyFilter() {
   identityRows = false;
   // The header shows the active query in place of the screen title, so the
   // reader can see what narrowed the list without reopening the keyboard.
-  headerSearchTitle = query.empty() ? std::string() : "“" + query + "”";
+  headerSearchTitle = collectionName;
+  if (!query.empty()) headerSearchTitle += (headerSearchTitle.empty() ? "" : " ") + ("“" + query + "”");
   if (openedOnly()) return;
   // Recent and Name with nothing to hide and nothing typed are the sort order
   // itself: no allocation and no pass over the index.
-  if (query.empty() && !isListTab(activeTabIndex) && readSet.count == 0) {
+  if (query.empty() && collectionKind == Collection::None && !isListTab(activeTabIndex) &&
+      (activeTabIndex != TITLE_TAB || readSet.count == 0)) {
     identityRows = true;
     return;
   }
@@ -867,8 +990,15 @@ void LibraryListActivity::applyFilter() {
   int overlapCursor = 0;
   // The path hash costs a read per row, so it is read only when a row can be
   // hidden by its status. A search covers every book, read ones included.
-  const bool needsStatus = isListTab(activeTabIndex) || (readSet.count > 0 && needle.empty());
-  const ShelfSet* rankSet = activeTabIndex == QUEUE_TAB ? &queueSet : activeTabIndex == READ_TAB ? &readSet : nullptr;
+  // Name hides finished books; Recent shows every book; a search covers all.
+  // A picked series or genre shows all its books, read or not, like a search.
+  const bool inCollectionView = collectionKind != Collection::None;
+  const bool hidesFinished = activeTabIndex == TITLE_TAB && needle.empty() && readSet.count > 0 && !inCollectionView;
+  const bool needsStatus = (isListTab(activeTabIndex) && !inCollectionView) || hidesFinished;
+  const ShelfSet* rankSet = inCollectionView              ? nullptr
+                            : activeTabIndex == QUEUE_TAB ? &queueSet
+                            : activeTabIndex == READ_TAB  ? &readSet
+                                                          : nullptr;
 
   uint16_t matchCount = 0;
   std::string author;
@@ -886,16 +1016,21 @@ void LibraryListActivity::applyFilter() {
     if (needsStatus) {
       uint64_t hash = 0;
       const shelfstatus::Tag tag = index.readPathHash(record, hash) ? tagForHash(hash) : shelfstatus::Tag::None;
-      const bool read = tag == shelfstatus::Tag::Read;
+      const bool finished = tag == shelfstatus::Tag::Read || tag == shelfstatus::Tag::Rereading;
       if (activeTabIndex == READ_TAB) {
-        if (!read) continue;
+        // Read and rereading books.
+        if (!finished) continue;
       } else if (activeTabIndex == QUEUE_TAB) {
-        if (read || queueSet.find(hash) < 0) continue;
-      } else if (read) {
-        // A finished book shows only on the Read tab.
+        // A read book may be queued to read again; one already being read or
+        // reread is not waiting.
+        if (queueSet.find(hash) < 0 || tag == shelfstatus::Tag::Rereading || tag == shelfstatus::Tag::Reading) continue;
+      } else if (finished) {
+        // Name leaves out finished and rereading books.
         continue;
       }
     }
+
+    if (collectionKind != Collection::None && !inCollection(record)) continue;
 
     if (!needle.empty() && !library::matchesQuery(std::string_view(record.fold, record.foldLen), needle)) {
       // The stored fold covers the title only, so the author has to be read and
@@ -945,7 +1080,18 @@ void LibraryListActivity::applyFilter() {
 // leave for home.
 void LibraryListActivity::handleBackAction() {
   auto& nav = activeNav();
-  if (!query.empty()) {
+  if (collectionKind != Collection::None) {
+    {
+      RenderLock lock(*this);
+      collectionKind = Collection::None;
+      collectionName.clear();
+      collectionFold.clear();
+      applyFilter();
+    }
+    nav.selected = 0;
+    nav.top = 0;
+    requestUpdate();
+  } else if (!query.empty()) {
     {
       RenderLock lock(*this);
       query.clear();
@@ -1430,6 +1576,8 @@ void LibraryListActivity::startReread(const std::string& path, const std::string
     LOG_ERR("LIB", "Could not arm reread");
     return;
   }
+  // A book being reread is no longer waiting in the queue.
+  READING_QUEUE.remove(path);
 
   // Back to the first page. Reaching the end does not clear the saved
   // position, so without this the book would reopen where it finished and the

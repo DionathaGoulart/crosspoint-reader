@@ -50,6 +50,10 @@ std::string joinLibraryPath(std::string_view folder, std::string_view name);
 // shape.
 std::string fold(std::string_view text);
 
+// Prefilter byte for a folded genre: stored in each record, compared before the
+// name blob is read. Never 0 for a non-empty genre, so 0 can mean "no genre".
+uint8_t genreHashOf(std::string_view folded);
+
 // First letter of an already-folded sort key, or 0 when the key starts with a
 // number/non-letter. The Library renders 0 as its shared '#' group.
 uint32_t foldedGroupInitial(std::string_view folded);

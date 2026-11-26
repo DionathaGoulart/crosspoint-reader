@@ -8,6 +8,7 @@
 #include "EndOfBookOptions.h"
 #include "ReaderSession.h"
 #include "activities/Activity.h"
+#include "components/OptionPopup.h"
 
 class ReaderActivity : public Activity {
   friend class ActivityManager;  // turns pages for a Bluetooth remote (ActivityManager::remoteTurn)
@@ -70,7 +71,7 @@ class ReaderActivity : public Activity {
   /** True while the end-of-book suggestion menu is on screen and owning input. */
   bool endOfBookMenuActive() const;
   /** True while a toolbar, panel or menu over the page owns the device keys: a remote turn is refused. */
-  virtual bool inputOverPage() const { return endOfBookMenuActive(); }
+  virtual bool inputOverPage() const { return endOfBookMenuActive() || ratingPopup.isActive(); }
   bool handleEndOfBookMenu(bool suppressConfirmRelease = false);
   bool handleEndOfBookPageTurn(bool prevTriggered, bool nextTriggered);
   void clearEndOfBookOptionsIfNeeded();
@@ -85,6 +86,13 @@ class ReaderActivity : public Activity {
   // reader's own end test additionally requires a non-empty spine; taking the
   // virtual here would file a spine-less book as finished.
   void recordFinishedIfAtEnd(bool atEnd);
+
+  // "Did you like it?" asked once, when a finish is counted for a book with no
+  // rating yet. It rides over the end screen; the loops call handleRatingPopup()
+  // first so its input is not also read as a page turn.
+  OptionPopup ratingPopup;
+  bool handleRatingPopup();
+  void askRating();
 
  public:
   ~ReaderActivity() override = default;

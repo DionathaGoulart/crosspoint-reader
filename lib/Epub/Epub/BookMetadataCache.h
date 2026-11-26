@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <deque>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -17,6 +18,10 @@ class BookMetadataCache {
     std::string language;
     std::string coverItemHref;
     std::string textReferenceHref;
+    // Filled by parseContentOpf(); not part of the book.bin cache.
+    std::string series;
+    std::optional<float> seriesIndex;
+    std::string genre;
   };
 
   struct SpineEntry {

@@ -14,6 +14,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstring>
+#include <optional>
 
 #include "LibraryIndexFile.h"
 #include "LibraryText.h"
@@ -40,6 +41,8 @@ constexpr size_t NAME_BUF_SIZE = 512;
 // the display name. Fixed stride keeps the second pass a seek rather than a scan.
 constexpr size_t STAGE_NAME_BYTES = 255;
 constexpr size_t STAGE_AUTHOR_BYTES = 128;
+constexpr size_t STAGE_SERIES_BYTES = 64;
+constexpr size_t STAGE_GENRE_BYTES = 32;
 // A folder path is stored behind one length byte in the folder section.
 constexpr size_t FOLDER_PATH_BYTES = 255;
 struct StagedEntry {
@@ -57,6 +60,11 @@ struct StagedEntry {
   // title on the other.
   uint8_t titleLen;
   char title[STAGE_NAME_BYTES];
+  // Series name and genre as the book spells them, for the collection lists.
+  uint8_t seriesLen;
+  char series[STAGE_SERIES_BYTES];
+  uint8_t genreLen;
+  char genre[STAGE_GENRE_BYTES];
 };
 constexpr size_t STAGE_STRIDE = sizeof(StagedEntry);
 
@@ -65,9 +73,12 @@ constexpr size_t STAGE_STRIDE = sizeof(StagedEntry);
 // is total and a rebuild cannot shuffle equal-prefix books between runs.
 struct SortKey {
   char key[12];
+  // Place in a series; CLIX_SERIES_INDEX_NONE for a book outside one. Orders a
+  // saga whose books share one series key.
+  uint16_t seriesIndex;
   uint16_t ordinal;
 };
-static_assert(sizeof(SortKey) == 14, "SortKey must stay small: it is the only per-book resident cost");
+static_assert(sizeof(SortKey) == 16, "SortKey must stay small: it is the only per-book resident cost");
 
 constexpr uint8_t MAX_AUTHOR_SPELLINGS = 16;
 struct SpellingSlot {
@@ -78,9 +89,17 @@ struct SpellingSlot {
 };
 static_assert(sizeof(SpellingSlot) <= 136, "spelling vote scratch grew unexpectedly");
 
+// Tenths so a 1.5 novella sits between books 1 and 2; clamped below the "none" value.
+uint16_t seriesIndexTenths(const std::optional<float>& number) {
+  if (!number.has_value() || !(*number >= 0.0f)) return CLIX_SERIES_INDEX_NONE;
+  const float tenths = *number * 10.0f + 0.5f;
+  return tenths >= 65534.0f ? static_cast<uint16_t>(65534) : static_cast<uint16_t>(tenths);
+}
+
 bool sortKeyLess(const SortKey& a, const SortKey& b) {
   const int cmp = memcmp(a.key, b.key, sizeof(a.key));
   if (cmp != 0) return cmp < 0;
+  if (a.seriesIndex != b.seriesIndex) return a.seriesIndex < b.seriesIndex;
   return a.ordinal < b.ordinal;
 }
 
@@ -330,6 +349,9 @@ int findPrior(WalkState& st, const uint64_t pathHash) {
   // and a name pulled out of one by pattern is a guess wearing a fact's clothes.
   std::string title = stemOf(name);
   std::string author;
+  std::string series;
+  std::optional<float> seriesNumber;
+  std::string genre;
   bool titleFromBook = false;
   bool authorFromBook = false;
 
@@ -353,15 +375,17 @@ int findPrior(WalkState& st, const uint64_t pathHash) {
   }
 
   if (reuseMetadata) {
-    if (!st.previous->readSourceAuthor(priorRecord, author)) {
+    // One read for title, source author, series and genre (fields 1-4).
+    std::string prior[5];
+    if (!st.previous->readBlobFields(priorRecord, 5, 0b11110, prior)) {
       st.failed = true;
       return false;
     }
-    const bool hasBookTitle = st.previous->readTitle(priorRecord, title);
-    if (!hasBookTitle && st.previous->ioFailed()) {
-      st.failed = true;
-      return false;
-    }
+    author = std::move(prior[2]);
+    series = std::move(prior[3]);
+    genre = std::move(prior[4]);
+    const bool hasBookTitle = !prior[1].empty();
+    if (hasBookTitle) title = std::move(prior[1]);
     entry.record = priorRecord;
     authorFromBook = !author.empty();
     if (hasBookTitle) {
@@ -390,7 +414,7 @@ int findPrior(WalkState& st, const uint64_t pathHash) {
       }
     } else {
       Epub epub(fullPath, CACHE_DIR);
-      loaded = epub.loadMetadata(bookTitle, author);
+      loaded = epub.loadMetadata(bookTitle, author, &series, &seriesNumber, &genre);
     }
     if (loaded) {
       entry.record.metadataStatus = CLIX_METADATA_EXTRACTED;
@@ -451,8 +475,25 @@ int findPrior(WalkState& st, const uint64_t pathHash) {
     entry.record.authorKeyLen = static_cast<uint8_t>(std::min(key.size(), CLIX_AUTHOR_KEY_BYTES));
     memcpy(entry.record.fold, folded.data(), entry.record.foldLen);
     memcpy(entry.record.authorKey, key.data(), entry.record.authorKeyLen);
+    // A saga sorts under its series name, in book order. No number sorts last.
+    const std::string seriesFold = fold(series);
+    entry.record.seriesKeyLen = static_cast<uint8_t>(utf8SafeTruncateBuffer(
+        seriesFold.data(), static_cast<int>(std::min(seriesFold.size(), CLIX_SERIES_KEY_BYTES))));
+    memcpy(entry.record.seriesKey, seriesFold.data(), entry.record.seriesKeyLen);
+    entry.record.seriesIndex = seriesIndexTenths(seriesNumber);
+    const std::string genreFold = fold(genre);
+    entry.record.genreHash = genreFold.empty() ? 0 : library::genreHashOf(genreFold);
   }
   memcpy(entry.name, name.data(), entry.record.nameLen);
+
+  // Bounded at a character boundary; the series name is also stored folded in
+  // the record, for sorting.
+  entry.seriesLen = static_cast<uint8_t>(
+      utf8SafeTruncateBuffer(series.data(), static_cast<int>(std::min(series.size(), STAGE_SERIES_BYTES))));
+  memcpy(entry.series, series.data(), entry.seriesLen);
+  entry.genreLen = static_cast<uint8_t>(
+      utf8SafeTruncateBuffer(genre.data(), static_cast<int>(std::min(genre.size(), STAGE_GENRE_BYTES))));
+  memcpy(entry.genre, genre.data(), entry.genreLen);
 
   const std::string displayAuthor = cleanPersonName(author);
   entry.authorLen = static_cast<uint8_t>(std::min(displayAuthor.size(), STAGE_AUTHOR_BYTES));
@@ -596,7 +637,7 @@ void walk(WalkState& st, const std::string& path, const int depth) {
 // truth.
 uint32_t blobBytesFor(const StagedEntry& entry, const StagedEntry& canonical) {
   return sizeof(entry.pathHash) + entry.record.nameLen + 1u + canonical.authorLen + 1u + entry.titleLen + 1u +
-         entry.authorLen;
+         entry.authorLen + 1u + entry.seriesLen + 1u + entry.genreLen;
 }
 
 bool emitIndex(const char* folderStagePath, WalkState& st, const uint16_t* order, const uint16_t* resolvedFirstSeen,
@@ -712,7 +753,7 @@ bool emitIndex(const char* folderStagePath, WalkState& st, const uint16_t* order
   // Author order has to be known BEFORE the records are written because its
   // permutation section is emitted first.
   // The title key array is already gone before this phase. At the 4096-record
-  // ceiling this checked, phase-local allocation is 57,344 bytes.
+  // ceiling this checked, phase-local allocation is 65,536 bytes.
   const bool rankable = coreSortsAvailable;
   if (rankable && n > 1) {
     LOG_DBG("LIBIDX", "author sort alloc: %u bytes, heap %u, max block %u", static_cast<unsigned>(n * sizeof(SortKey)),
@@ -731,6 +772,7 @@ bool emitIndex(const char* folderStagePath, WalkState& st, const uint16_t* order
         memset(authorSort[i].key, 0, sizeof(authorSort[i].key));
         memcpy(authorSort[i].key, r.authorKey, std::min<size_t>(r.authorKeyLen, sizeof(authorSort[i].key)));
       }
+      authorSort[i].seriesIndex = 0;
       authorSort[i].ordinal = i;
     }
     if (!ioFailed) {
@@ -900,6 +942,7 @@ bool emitIndex(const char* folderStagePath, WalkState& st, const uint16_t* order
         memset(authorSort[i].key, 0, sizeof(authorSort[i].key));
         memcpy(authorSort[i].key, key.data(), std::min(key.size(), sizeof(authorSort[i].key)));
       }
+      authorSort[i].seriesIndex = 0;
       authorSort[i].ordinal = i;
     }
     if (!ioFailed) {
@@ -1043,6 +1086,10 @@ bool emitIndex(const char* folderStagePath, WalkState& st, const uint16_t* order
     if (entry.titleLen > 0) put(entry.title, entry.titleLen);
     put(&entry.authorLen, 1);
     if (entry.authorLen > 0) put(entry.author, entry.authorLen);
+    put(&entry.seriesLen, 1);
+    if (entry.seriesLen > 0) put(entry.series, entry.seriesLen);
+    put(&entry.genreLen, 1);
+    if (entry.genreLen > 0) put(entry.genre, entry.genreLen);
     blobWritten += blobBytesFor(entry, canonical);
   }
   header.nameLen = blobWritten;
@@ -1359,8 +1406,8 @@ bool buildLibraryIndex(const char* rootPath, BuildStats& stats, const bool readM
   stagedEntry.reset();
   dedupKeys.reset();
 
-  // Read the staged fold prefixes back and sort ordinals. The checked 14-byte
-  // key allocation reaches 57,344 bytes at the 4,096-record format ceiling.
+  // Read the staged fold prefixes back and sort ordinals. The checked 16-byte
+  // key allocation reaches 65,536 bytes at the 4,096-record format ceiling.
   auto order = makeUniqueNoThrow<uint16_t[]>(st.books == 0 ? 1 : st.books);
   if (!order) {
     LOG_ERR("LIBIDX", "order array alloc failed (%u books)", static_cast<unsigned>(st.books));
@@ -1400,7 +1447,13 @@ bool buildLibraryIndex(const char* rootPath, BuildStats& stats, const bool readM
           return false;
         }
         memset(keys[i].key, 0, sizeof(keys[i].key));
-        memcpy(keys[i].key, r.fold, std::min<size_t>(r.foldLen, sizeof(keys[i].key)));
+        if (r.seriesKeyLen > 0) {
+          memcpy(keys[i].key, r.seriesKey, std::min<size_t>(r.seriesKeyLen, sizeof(keys[i].key)));
+          keys[i].seriesIndex = r.seriesIndex;
+        } else {
+          memcpy(keys[i].key, r.fold, std::min<size_t>(r.foldLen, sizeof(keys[i].key)));
+          keys[i].seriesIndex = CLIX_SERIES_INDEX_NONE;
+        }
         keys[i].ordinal = i;
       }
       if (!stage.close()) {

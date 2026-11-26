@@ -925,10 +925,35 @@ void SleepActivity::renderStatsSleepScreen() const {
   renderer.displayBuffer(kSleepClean);
 }
 
+namespace {
+// True when the wallpaper's last rows are mostly dark. Samples a few rows and
+// every 8th pixel of them straight from the file, so it costs a couple of
+// small reads and one row-sized buffer, and fails to "light" (the old band).
+bool wallpaperBottomIsDark(const Bitmap& wallpaper) {
+  const int width = wallpaper.getWidth();
+  const int height = wallpaper.getHeight();
+  if (width <= 0 || height <= 0) return false;
+  auto gray = makeUniqueNoThrow<uint8_t[]>(static_cast<size_t>(width));
+  auto raw = makeUniqueNoThrow<uint8_t[]>(static_cast<size_t>(wallpaper.getRowBytes()));
+  if (!gray || !raw) return false;
+  constexpr int kRows = 4;
+  uint32_t sum = 0;
+  uint32_t samples = 0;
+  for (int i = 0; i < kRows && i < height; i++) {
+    if (wallpaper.readRowGray(height - 1 - i * 2, gray.get(), raw.get()) != BmpReaderError::Ok) return false;
+    for (int x = 0; x < width; x += 8) {
+      sum += gray[x];
+      samples++;
+    }
+  }
+  return samples > 0 && sum / samples < 128;
+}
+}  // namespace
+
 // The wallpaper, with a narrow band of figures along the bottom.
 //
 // A photo on a one-bit panel leaves no legible place for text, so the numbers
-// get a solid white strip of their own rather than being drawn over the
+// get a solid strip of their own, in the wallpaper's bottom tone, rather than being drawn over the
 // picture and lost in it. The strip is only as tall as the type it holds; the
 // rest is wallpaper, which is the point of the mode.
 void SleepActivity::renderStatsOverWallpaperSleepScreen() const {
@@ -945,6 +970,8 @@ void SleepActivity::renderStatsOverWallpaperSleepScreen() const {
     return;
   }
 
+  // The band takes the wallpaper's own bottom tone, so it reads as part of the picture.
+  bool darkBand = false;
   std::string selectedPath;
   selectRandomSleepFile("/.sleep", "/sleep", SleepRecentKind::Standard, selectedPath);
   if (selectedPath.empty() && Storage.exists("/sleep.bmp")) selectedPath = "/sleep.bmp";
@@ -972,6 +999,8 @@ void SleepActivity::renderStatsOverWallpaperSleepScreen() const {
     }
     const auto placement = calculateBitmapPlacement(wallpaper.getWidth(), wallpaper.getHeight(), renderer);
     renderer.drawBitmap(wallpaper, placement.x, placement.y, pageWidth, pageHeight, placement.cropX, placement.cropY);
+    // A letterboxed image leaves a white margin under it: keep the light band.
+    darkBand = placement.y == 0 && wallpaperBottomIsDark(wallpaper);
     file.close();
   }
 
@@ -1014,10 +1043,12 @@ void SleepActivity::renderStatsOverWallpaperSleepScreen() const {
   const int barBlock = daily.enabled ? kBarGap + kBarHeight : 0;
   const int bandHeight = kPad + valueHeight + barBlock + kValueToLabel + labelHeight + kPad;
   const int bandTop = pageHeight - bandHeight;
-  renderer.fillRect(0, bandTop, pageWidth, bandHeight, false);
+  // `ink` is the figures' colour: black on a light band, white on a dark one.
+  const bool ink = !darkBand;
+  renderer.fillRect(0, bandTop, pageWidth, bandHeight, darkBand);
   // One hairline where the picture meets the band, so the two read as separate
   // surfaces instead of the photo appearing to fade out.
-  renderer.fillRect(0, bandTop, pageWidth, 2, true);
+  renderer.fillRect(0, bandTop, pageWidth, 2, ink);
 
   // The middle column carries a number, a slash, another number and a bar, so
   // it gets half the width and the two single figures a quarter each.
@@ -1029,10 +1060,10 @@ void SleepActivity::renderStatsOverWallpaperSleepScreen() const {
   const int labelY = valueY + valueHeight + barBlock + kValueToLabel;
   for (int i = 0; i < 3; ++i) {
     const int valueWidth = renderer.getTextWidth(UI_12_FONT_ID, figures[i].value, EpdFontFamily::BOLD);
-    renderer.drawText(UI_12_FONT_ID, columnX[i] + (columnWidth[i] - valueWidth) / 2, valueY, figures[i].value, true,
+    renderer.drawText(UI_12_FONT_ID, columnX[i] + (columnWidth[i] - valueWidth) / 2, valueY, figures[i].value, ink,
                       EpdFontFamily::BOLD);
     const int labelWidth = renderer.getTextWidth(SMALL_FONT_ID, figures[i].label);
-    renderer.drawText(SMALL_FONT_ID, columnX[i] + (columnWidth[i] - labelWidth) / 2, labelY, figures[i].label);
+    renderer.drawText(SMALL_FONT_ID, columnX[i] + (columnWidth[i] - labelWidth) / 2, labelY, figures[i].label, ink);
   }
 
   if (daily.enabled) {
@@ -1041,9 +1072,9 @@ void SleepActivity::renderStatsOverWallpaperSleepScreen() const {
     const int barWidth = columnWidth[1] * 2 / 3;
     const int barX = columnX[1] + (columnWidth[1] - barWidth) / 2;
     const int barY = valueY + valueHeight + kBarGap;
-    renderer.drawRect(barX, barY, barWidth, kBarHeight, true);
+    renderer.drawRect(barX, barY, barWidth, kBarHeight, ink);
     const int fill = barWidth * daily.percent / 100;
-    if (fill > 0) renderer.fillRect(barX, barY, fill, kBarHeight, true);
+    if (fill > 0) renderer.fillRect(barX, barY, fill, kBarHeight, ink);
   }
 
   // No invertScreen() here: the wallpaper carries its own tone, and inverting
@@ -1057,7 +1088,7 @@ void SleepActivity::renderDefaultSleepScreen() const {
 
   renderer.clearScreen();
   renderer.drawImage(Logo120, (pageWidth - 120) / 2, (pageHeight - 120) / 2, 120, 120);
-  renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2 + 70, tr(STR_CROSSPOINT), true, EpdFontFamily::BOLD);
+  renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2 + 70, tr(STR_APP_NAME), true, EpdFontFamily::BOLD);
   renderer.drawCenteredText(SMALL_FONT_ID, pageHeight / 2 + 95, tr(STR_SLEEPING));
 
   // Make sleep screen dark unless light is selected in settings

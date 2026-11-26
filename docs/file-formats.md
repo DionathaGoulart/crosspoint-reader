@@ -697,7 +697,7 @@ and is rebuilt; that is the entire migration mechanism.
 | Folders | `folderStart` | length-prefixed paths, one per folder |
 | Records | `recordStart` | `bookCount` × 128-byte `ClixRecord` |
 | Permutations | `permStart` | `bookCount` u16 author order, then `bookCount` u16 arrival order |
-| Name blob | `nameStart` | per record: path hash, name, canonical author, title, source author (see below) |
+| Name blob | `nameStart` | per record: path hash, name, canonical author, title, source author, series, genre (see below) |
 
 The arrival permutation runs oldest first, keyed by the record's FAT
 modification time (when the file landed on the card); `firstSeen` — the
@@ -706,6 +706,8 @@ filesystem reports no time. Fold version 3 introduced the timestamp key; a
 fold bump rebuilds ranks while preserving `firstSeen`.
 Fold version 4 preserves leading articles in title sort and search keys.
 Fold version 5 drops all Unicode 18.0 Hebrew combining marks, including U+05C8 and U+05C9.
+Fold version 6 shrinks `fold` to 80 bytes and adds the series key, so a saga sorts under its series name.
+Fold version 7 adds the series name and the genre to the name blob.
 
 Sections are 512-byte aligned so each starts on an SD block boundary.
 
@@ -714,11 +716,13 @@ Sections are 512-byte aligned so each starts on an SD block boundary.
 A fixed stride is what lets the reader seek straight to record *n* without an
 offset table, and read a screenful in one 4 KB block. `static_assert` enforces it.
 
-Each record carries `fold[96]`, the title normalised for search and sorting —
+Each record carries `fold[80]`, the title normalised for search and sorting —
 accents stripped, case dropped, leading articles preserved — and `authorKey[12]`,
 the author's words folded and sorted so that "Victor Hugo" and "Hugo Victor" group as
 one person. `authorKey` is a GROUPING key, not an ordering one: the shelf orders by
 surname, derived separately from the display name.
+
+Each record also holds `seriesKey[12]` (a prefix of the folded series name, which the title order sorts a saga by), `seriesIndex` (the book's number in tenths, `0xFFFF` for none), `seriesKeyLen` and `genreHash` (a prefilter byte for the genre list).
 
 The byte before the folded title records metadata extraction status: not
 attempted, extracted, or failed. The final four bytes contain the packed FAT
@@ -740,6 +744,8 @@ Per record, at `nameStart + nameOff`:
 [u8][author]     display author, one spelling chosen per authorKey across the library
 [u8][title]      the book's own title, or length 0 if it never gave one
 [u8][source]     cleaned author spelling before the library-wide spelling vote
+[u8][series]     series name as the book spells it, or length 0
+[u8][genre]      the first dc:subject, or length 0
 ```
 
 The filename must stay the first textual field and stay the filename: `readPath`
@@ -766,7 +772,7 @@ check, not a forced metadata reread.
 
 `RANKS_DEGRADED` says one or more orders fell back to walk order because a
 checked sort allocation failed. Title and author each use a phase-local
-`SortKey[bookCount]` allocation (14 bytes per book, 57,344 bytes at the 4,096-book
+`SortKey[bookCount]` allocation (16 bytes per book, 65,536 bytes at the 4,096-book
 format ceiling); the first array is released before the second is requested.
 Sorting is therefore best effort through the full format limit rather than
 being disabled at an arbitrary library size.

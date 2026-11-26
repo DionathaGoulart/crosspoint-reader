@@ -32,11 +32,18 @@ inline constexpr uint8_t CLIX_FORMAT_VERSION = 2;
 
 // Bump when the fold or a permutation's sort key changes.
 // Forces fold and ranks to be rebuilt while firstSeen values are preserved, so
-// arrival history survives.
-inline constexpr uint8_t CLIX_FOLD_VERSION = 5;
+// arrival history survives. 6: the fold shrank to 80 bytes to make room for
+// the series key, and the title order sorts a saga under its series name. 7: the name blob
+// gains the series name and the genre after the source author.
+inline constexpr uint8_t CLIX_FOLD_VERSION = 7;
 
 inline constexpr uint32_t CLIX_ALIGN = 512;
-inline constexpr size_t CLIX_FOLD_BYTES = 96;
+inline constexpr size_t CLIX_FOLD_BYTES = 80;
+// Prefix of the folded series name; the title order sorts a saga by it.
+// Two series sharing these 12 bytes interleave by book number.
+inline constexpr size_t CLIX_SERIES_KEY_BYTES = 12;
+// seriesIndex value of a book with no number in its series.
+inline constexpr uint16_t CLIX_SERIES_INDEX_NONE = 0xFFFF;
 inline constexpr size_t CLIX_AUTHOR_KEY_BYTES = 12;
 
 // A 2000-book card already produces a 429 KiB index. This hard bound keeps every
@@ -101,6 +108,14 @@ struct ClixRecord {
   uint8_t authorKeyLen;
   uint8_t metadataStatus;
   char fold[CLIX_FOLD_BYTES];
+  // Folded series name prefix, and the book's place in the series in tenths
+  // (so 1.5 stores as 15). seriesKeyLen is 0 for a book outside any series.
+  char seriesKey[CLIX_SERIES_KEY_BYTES];
+  uint16_t seriesIndex;
+  uint8_t seriesKeyLen;
+  // Low byte of the path-hash function over the folded genre; 0 with no genre.
+  // A prefilter for the genre list: the name blob confirms the match.
+  uint8_t genreHash;
   char authorKey[CLIX_AUTHOR_KEY_BYTES];
   uint32_t modificationTime;
 };
