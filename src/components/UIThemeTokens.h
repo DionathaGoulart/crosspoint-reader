@@ -2,6 +2,7 @@
 #include <BoardConfig.h>
 #include <FreeInkUIGfxRenderer.h>
 
+#include "CrossPointSettings.h"
 #include "UITheme.h"
 
 // Merges the active UITheme's shape (row gaps, radii, insets, selection
@@ -42,6 +43,6 @@ inline freeink::ui::ThemeTokens uiThemeTokens(const freeink::ui::GfxRendererTarg
   tokens.controlRadius = static_cast<uint8_t>(metrics.controlRadius);
   tokens.sheetRadius = static_cast<uint8_t>(metrics.sheetRadius);
   tokens.capsuleRadius = static_cast<uint8_t>(metrics.capsuleRadius);
-  tokens.bodyText.bold = metrics.listTitleBold;
+  tokens.bodyText.bold = metrics.listTitleBold || SETTINGS.uiBoldText != 0;
   return tokens;
 }

@@ -64,6 +64,8 @@ void forEachBaseSetting(SettingVisitor visit, void* context) {
 #endif
   // Night mode = inverted output polarity everywhere (ActivityManager
   // applies it to every activity), so it lives in the Display category.
+  emit(SettingInfo::Toggle(StrId::STR_BOLD_UI_TEXT, &CrossPointSettings::uiBoldText, "uiBoldText",
+                           StrId::STR_CAT_DISPLAY));
   emit(SettingInfo::Toggle(StrId::STR_NIGHT_MODE, &CrossPointSettings::screenInverted, "screenInverted",
                            StrId::STR_CAT_DISPLAY));
 
@@ -355,6 +357,8 @@ void forEachBaseSetting(SettingVisitor visit, void* context) {
                            "statusBarChapterPageCount", StrId::STR_CUSTOMISE_STATUS_BAR));
   emit(SettingInfo::Toggle(StrId::STR_BOOK_PROGRESS_PERCENTAGE, &CrossPointSettings::statusBarBookProgressPercentage,
                            "statusBarBookProgressPercentage", StrId::STR_CUSTOMISE_STATUS_BAR));
+  emit(SettingInfo::Toggle(StrId::STR_TIME_LEFT, &CrossPointSettings::statusBarTimeLeft, "statusBarTimeLeft",
+                           StrId::STR_CUSTOMISE_STATUS_BAR));
   emit(SettingInfo::Enum(StrId::STR_PROGRESS_BAR, &CrossPointSettings::statusBarProgressBar,
                          {StrId::STR_BOOK, StrId::STR_CHAPTER, StrId::STR_HIDE}, "statusBarProgressBar",
                          StrId::STR_CUSTOMISE_STATUS_BAR));

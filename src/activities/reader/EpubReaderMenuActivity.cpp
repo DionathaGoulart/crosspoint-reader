@@ -5,15 +5,52 @@
 #include <HalFrontlight.h>
 #include <I18n.h>
 
+#include <cstdio>
+#include <string>
+
 #include "CrossPointSettings.h"
 #include "KOReaderCredentialStore.h"
 #include "MappedInputManager.h"
 #include "ReaderUtils.h"
 #include "components/UITheme.h"
+#include "fontIds.h"
 #include "util/PluginEvents.h"
 #include "util/SlideSwitch.h"
 
 namespace fui = freeink::ui;
+
+namespace {
+// Heading each action sits under. Entries must stay contiguous per group in
+// buildMenuItems(), since a heading is drawn where the group changes.
+StrId groupOf(const EpubReaderMenuActivity::MenuAction action) {
+  using A = EpubReaderMenuActivity::MenuAction;
+  switch (action) {
+    case A::SELECT_CHAPTER:
+    case A::GO_TO_PERCENT:
+    case A::BOOKMARKS:
+    case A::FOOTNOTES:
+      return StrId::STR_MENU_GROUP_NAVIGATE;
+    case A::DICTIONARY:
+    case A::TOGGLE_BOOKMARK:
+    case A::SAVE_CLIPPING:
+    case A::VIEW_CLIPPINGS:
+      return StrId::STR_MENU_GROUP_PAGE;
+    case A::TEXT_SETTINGS:
+    case A::NIGHT_MODE:
+    case A::FRONTLIGHT:
+    case A::ROTATE_SCREEN:
+      return StrId::STR_MENU_GROUP_DISPLAY;
+    case A::AUTO_PAGE_TURN:
+    case A::BLUETOOTH:
+    case A::SYNC:
+    case A::SCREENSHOT:
+    case A::DISPLAY_QR:
+      return StrId::STR_MENU_GROUP_TOOLS;
+    default:
+      return StrId::STR_MENU_GROUP_LEAVE;
+  }
+}
+}  // namespace
 
 EpubReaderMenuActivity::EpubReaderMenuActivity(GfxRenderer& renderer, MappedInputManager& mappedInput,
                                                const std::string& title, const int currentPage, const int totalPages,
@@ -53,10 +90,16 @@ void EpubReaderMenuActivity::onExit() {
 // here since menuItems (and thus which rows exist) never changes after
 // construction; buildScreen() only touches the two rows with a live value.
 void EpubReaderMenuActivity::buildMenuRowItems() {
+  bool haveGroup = false;
+  StrId previousGroup = StrId::STR_MENU_GROUP_LEAVE;
   for (size_t i = 0; i < menuItems.size() && i < MAX_MENU_ITEMS; i++) {
     fui::ListItem item;
     item.label = I18N.get(menuItems[i].labelId);
     item.actionValue = static_cast<int16_t>(i);
+    const StrId group = groupOf(menuItems[i].action);
+    if (!haveGroup || group != previousGroup) item.sectionHeading = I18N.get(group);
+    previousGroup = group;
+    haveGroup = true;
     menuRowItems[i] = item;
   }
 }
@@ -65,17 +108,16 @@ void EpubReaderMenuActivity::buildMenuItems(std::vector<MenuItem>& items, const 
                                             const bool hasBookmarks, const bool hasClippings) {
   items.clear();
   items.reserve(MAX_MENU_ITEMS);
-  // Most used first: where to read, then how it looks. Actions on the page
-  // follow, then device switches, and leaving or destructive entries come last.
+  // Grouped under headings (see groupOf): where to read, the current page, how
+  // it looks, tools and sync, then leaving or destructive entries last.
   items.push_back({MenuAction::SELECT_CHAPTER, StrId::STR_SELECT_CHAPTER});
-  if (hasFootnotes) {
-    items.push_back({MenuAction::FOOTNOTES, StrId::STR_FOOTNOTES});
-  }
+  items.push_back({MenuAction::GO_TO_PERCENT, StrId::STR_GO_TO_PERCENT});
   if (hasBookmarks) {
     items.push_back({MenuAction::BOOKMARKS, StrId::STR_BOOKMARKS});
   }
-  items.push_back({MenuAction::TEXT_SETTINGS, StrId::STR_TEXT_SETTINGS});
-  items.push_back({MenuAction::GO_TO_PERCENT, StrId::STR_GO_TO_PERCENT});
+  if (hasFootnotes) {
+    items.push_back({MenuAction::FOOTNOTES, StrId::STR_FOOTNOTES});
+  }
   if (SETTINGS.dictionaryName[0] != '\0') {
     items.push_back({MenuAction::DICTIONARY, StrId::STR_LOOKUP});
   }
@@ -84,19 +126,18 @@ void EpubReaderMenuActivity::buildMenuItems(std::vector<MenuItem>& items, const 
   if (hasClippings) {
     items.push_back({MenuAction::VIEW_CLIPPINGS, StrId::STR_VIEW_CLIPPINGS});
   }
+  items.push_back({MenuAction::TEXT_SETTINGS, StrId::STR_TEXT_SETTINGS});
   if (!slideSwitchOwns(CrossPointSettings::SLIDE_SWITCH_NIGHT_MODE)) {
     items.push_back({MenuAction::NIGHT_MODE, StrId::STR_NIGHT_MODE});
   }
   if (Frontlight.present() && !slideSwitchOwnsLight()) {
     items.push_back({MenuAction::FRONTLIGHT, StrId::STR_FRONTLIGHT});
   }
+  items.push_back({MenuAction::ROTATE_SCREEN, StrId::STR_ORIENTATION});
+  items.push_back({MenuAction::AUTO_PAGE_TURN, StrId::STR_AUTO_TURN_PAGES_PER_MIN});
   if (bleturner::status().compiledIn && SETTINGS.ble.peerAddr[0] != '\0') {
     items.push_back({MenuAction::BLUETOOTH, StrId::STR_BT_PAGE_TURNER});
   }
-  items.push_back({MenuAction::ROTATE_SCREEN, StrId::STR_ORIENTATION});
-  items.push_back({MenuAction::AUTO_PAGE_TURN, StrId::STR_AUTO_TURN_PAGES_PER_MIN});
-  items.push_back({MenuAction::SCREENSHOT, StrId::STR_SCREENSHOT_BUTTON});
-  items.push_back({MenuAction::DISPLAY_QR, StrId::STR_DISPLAY_QR});
   bool canSync = KOREADER_STORE.hasCredentials();
   for (size_t event = 0; !canSync && event < static_cast<size_t>(pluginevents::Event::COUNT); ++event) {
     canSync = pluginevents::anySubscriber(static_cast<pluginevents::Event>(event));
@@ -104,6 +145,8 @@ void EpubReaderMenuActivity::buildMenuItems(std::vector<MenuItem>& items, const 
   if (canSync) {
     items.push_back({MenuAction::SYNC, StrId::STR_SYNC_PROGRESS});
   }
+  items.push_back({MenuAction::SCREENSHOT, StrId::STR_SCREENSHOT_BUTTON});
+  items.push_back({MenuAction::DISPLAY_QR, StrId::STR_DISPLAY_QR});
   items.push_back({MenuAction::GO_HOME, StrId::STR_GO_HOME_BUTTON});
   items.push_back({MenuAction::DELETE_CACHE, StrId::STR_DELETE_CACHE});
 }
@@ -211,10 +254,11 @@ void EpubReaderMenuActivity::buildScreen(UiScreen& screen) {
   const auto& metrics = UITheme::getInstance().getMetrics();
   const Rect safe = UITheme::getInstance().getScreenSafeArea(renderer, true, false);
   // Content: the safe area minus the header band GUI.drawHeader paints.
-  screen.setContentMarginFromScreen(fui::Insets{
-      static_cast<int16_t>(safe.y + metrics.topPadding + metrics.headerHeight),
-      static_cast<int16_t>(renderer.getScreenWidth() - (safe.x + safe.width)),
-      static_cast<int16_t>(renderer.getScreenHeight() - (safe.y + safe.height)), static_cast<int16_t>(safe.x)});
+  screen.setContentMarginFromScreen(
+      fui::Insets{static_cast<int16_t>(safe.y + metrics.topPadding + metrics.headerHeight),
+                  static_cast<int16_t>(renderer.getScreenWidth() - (safe.x + safe.width)),
+                  static_cast<int16_t>(renderer.getScreenHeight() - (safe.y + safe.height) + hintLineHeight()),
+                  static_cast<int16_t>(safe.x)});
 
   // Progress summary where the old sub-header band sat.
   std::string progressLine;
@@ -259,10 +303,56 @@ void EpubReaderMenuActivity::buildScreen(UiScreen& screen) {
   screen.list(props);
 }
 
+int EpubReaderMenuActivity::hintLineHeight() const { return renderer.getLineHeight(SMALL_FONT_ID) + 4; }
+
+// One line under the list that tells what holding a button does, so those
+// gestures can be found without reading the manual. Empty when nothing is set.
+std::string EpubReaderMenuActivity::longPressHint() const {
+  StrId confirmAction = StrId::STR_NONE_OPT;
+  switch (SETTINGS.longPressMenuFunction) {
+    case CrossPointSettings::LP_MENU_KOSYNC:
+      confirmAction = StrId::STR_SYNC_PROGRESS;
+      break;
+    case CrossPointSettings::LP_MENU_BOOKMARK:
+      confirmAction = StrId::STR_TOGGLE_BOOKMARK;
+      break;
+    case CrossPointSettings::LP_MENU_DICTIONARY:
+      confirmAction = StrId::STR_LOOKUP;
+      break;
+    case CrossPointSettings::LP_MENU_CREATE_CLIPPING:
+      confirmAction = StrId::STR_SAVE_CLIPPING;
+      break;
+    case CrossPointSettings::LP_MENU_FOOTNOTES:
+      confirmAction = StrId::STR_FOOTNOTES;
+      break;
+    default:
+      break;
+  }
+  std::string hint;
+  char part[64];
+  if (confirmAction != StrId::STR_NONE_OPT) {
+    snprintf(part, sizeof(part), tr(STR_HINT_HOLD_CONFIRM), I18N.get(confirmAction));
+    hint = part;
+  }
+  if (SETTINGS.longPressButtonBehavior == CrossPointSettings::CHAPTER_SKIP) {
+    snprintf(part, sizeof(part), tr(STR_HINT_HOLD_PAGE), tr(STR_LONG_PRESS_BEHAVIOR_SKIP));
+    if (!hint.empty()) hint += "  |  ";
+    hint += part;
+  }
+  return hint;
+}
+
 void EpubReaderMenuActivity::drawChrome() {
   // Header via GUI.drawHeader (already FreeInkUI-themed) for the battery
   // indicator; the rest of the screen renders through the app.
   GUI.drawHeader(renderer, UITheme::getInstance().getHeaderRect(renderer, true, false), title.c_str());
+
+  const std::string hint = longPressHint();
+  if (!hint.empty()) {
+    const Rect safe = UITheme::getInstance().getScreenSafeArea(renderer, true, false);
+    const std::string fitted = renderer.truncatedText(SMALL_FONT_ID, hint.c_str(), safe.width, EpdFontFamily::REGULAR);
+    UITheme::drawCenteredText(renderer, safe, SMALL_FONT_ID, safe.y + safe.height - hintLineHeight(), fitted.c_str());
+  }
 }
 
 void EpubReaderMenuActivity::render(RenderLock&& lock) {

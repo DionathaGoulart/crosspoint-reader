@@ -270,6 +270,16 @@ Settings are grouped into **System**, **Display**, **Reader**, **Controls**, **L
   - "Book Bar Only" - Show book progress (as bar)
   - "Full w/ Chapter Bar" - Show status bar with chapter progress (as bar)
 
+- **Time left in chapter** (**Customise Status Bar**): Shows an estimate such as `~4 min` for the rest of the chapter. It is off by default, appears after a few page turns, and is based on your recent reading pace. The pace is forgotten when the device restarts.
+
+- **Bold menu text** (**Settings → Display**): Draws the labels in menus and lists in bold.
+
+- **Search** (**Settings**, last row): Type part of a setting's name to list every matching setting from all sections.
+
+- **Low battery warning**: A message appears once when the battery falls to 15% and again at 5%. It is skipped while charging and during file transfers or updates.
+
+- **Reader menu groups**: The reader menu lists its entries under headings (Go to, This page, Display, Tools, Leave). A line under the list shows what holding Confirm or a page button does, based on your settings. At the end of a book the menu offers the next books in the folder, **Library**, and **Home**.
+
 - **Hide Battery %**: Configure where to suppress the battery percentage display in the status bar; the battery icon will still be shown:
   
   - "Never" (default) - Always show battery percentage

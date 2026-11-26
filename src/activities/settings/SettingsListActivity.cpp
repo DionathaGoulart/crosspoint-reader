@@ -9,8 +9,10 @@
 #include "MappedInputManager.h"
 #include "ProfilesSettingsActivity.h"
 #include "SettingsActivity.h"
+#include "activities/util/KeyboardEntryActivity.h"
 #include "components/UITheme.h"
 #include "components/UiAppHelpers.h"
+#include "components/icons/search32.h"
 
 namespace fui = freeink::ui;
 
@@ -53,6 +55,10 @@ void SettingsListActivity::rebuildRows() {
     item.icon = fui::bitmapFromIcon(*SECTION_ICONS[i]);
     item.actionValue = static_cast<int16_t>(i);
   }
+  auto& search = rowItems_[SETTINGS_SECTION_COUNT];
+  search.label = tr(STR_SEARCH);
+  search.icon = fui::bitmapFromIcon(icon_search_32);
+  search.actionValue = static_cast<int16_t>(SETTINGS_SECTION_COUNT);
 }
 
 void SettingsListActivity::buildScreen(UiScreen& screen) {
@@ -81,7 +87,44 @@ void SettingsListActivity::activateIndex(const int index) {
   // The section screen replaces this one; a lingering flash would gray an
   // unrelated element on return.
   app.clearTapFlash();
+  if (index == static_cast<int>(SETTINGS_SECTION_COUNT)) {
+    openSearch();
+    return;
+  }
   openSection(static_cast<SettingsSection>(index));
+}
+
+// Asks for a word, then lists every setting whose name contains it.
+void SettingsListActivity::openSearch() {
+  nav.selected = static_cast<int>(SETTINGS_SECTION_COUNT);
+  auto keyboard = makeUniqueNoThrow<KeyboardEntryActivity>(renderer, mappedInput, tr(STR_SEARCH), std::string(), 32,
+                                                           InputType::Text);
+  if (!keyboard) {
+    LOG_ERR("SETTINGS", "OOM: search keyboard");
+    return;
+  }
+  startActivityForResult(std::move(keyboard), [this](const ActivityResult& result) {
+    if (result.isCancelled) {
+      requestUpdate();
+      return;
+    }
+    std::string text = std::get<KeyboardResult>(result.data).text;
+    if (text.empty()) {
+      requestUpdate();
+      return;
+    }
+    auto activity = makeUniqueNoThrow<SettingsActivity>(renderer, mappedInput, SettingsSection::End,
+                                                        ControlsGroup::Root, std::move(text));
+    if (!activity) {
+      LOG_ERR("SETTINGS", "OOM: SettingsActivity");
+      return;
+    }
+    startActivityForResult(std::move(activity), [this](const ActivityResult&) {
+      rebuildRows();
+      resetUi();
+      requestUpdate();
+    });
+  });
 }
 
 void SettingsListActivity::openSection(const SettingsSection section) {

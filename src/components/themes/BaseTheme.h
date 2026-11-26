@@ -266,6 +266,10 @@ class BaseTheme {
   static void drawSelectionHandle(const GfxRenderer& renderer, Rect rect, bool left);
   static void drawSelectionActions(const GfxRenderer& renderer, Rect rect, int count = 3, int firstAction = 0);
   virtual Rect drawPopup(const GfxRenderer& renderer, const char* message) const;
+  // Popup whose message ends in 1-3 dots chosen by `step`, so repeated calls
+  // read as a small loading animation. The box keeps its width between steps.
+  Rect drawBusyPopup(const GfxRenderer& renderer, const char* message, uint8_t step) const;
+  Rect drawPopupWithDots(const GfxRenderer& renderer, const char* message, uint8_t dots) const;
   virtual void fillPopupProgress(const GfxRenderer& renderer, const Rect& layout, const int progress) const;
   static void drawStatusBar(GfxRenderer& renderer, const float bookProgress, const int currentPage, const int pageCount,
                             std::string title, const int paddingBottom = 0, const int textYOffset = 0,

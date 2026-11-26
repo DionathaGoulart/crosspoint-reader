@@ -35,7 +35,9 @@
 #include "stats/FinishedBooksStore.h"
 #include "stats/ReadingQueueStore.h"
 #include "util/BookCacheUtils.h"
+#include "util/BookProgress.h"
 #include "util/BookThumbnail.h"
+#include "util/BusyIndicator.h"
 
 namespace fui = freeink::ui;
 
@@ -118,7 +120,6 @@ void LibraryListActivity::onEnter() {
                              index.header().metadataEnabled != readMetadata;
   if (rebuildNeeded) {
     index.close();
-    GUI.drawPopup(renderer, tr(STR_LIBRARY_REBUILDING));
     rebuildIndex();
     if (!index.open(library::libraryIndexPath())) LOG_ERR("LIB", "cannot open library index");
   }
@@ -145,7 +146,9 @@ void LibraryListActivity::onExit() {
 
 bool LibraryListActivity::rebuildIndex() {
   library::BuildStats stats;
-  const bool ok = library::buildLibraryIndex("/", stats, SETTINGS.libraryUseMetadata != 0);
+  BusyIndicator busy(renderer, tr(STR_LIBRARY_REBUILDING));
+  const bool ok =
+      library::buildLibraryIndex("/", stats, SETTINGS.libraryUseMetadata != 0, BusyIndicator::onProgress, &busy);
   if (!ok) {
     LOG_ERR("LIB", "index build failed");
     return false;
@@ -625,6 +628,34 @@ void LibraryListActivity::refreshShelf() {
   requestUpdate();
 }
 
+bool LibraryListActivity::pathForEntry(const int entry, std::string& path) {
+  if (entry < pinnedCount()) {
+    const RecentBook* book = storeBook(entry);
+    if (!book) return false;
+    path = book->path;
+    return true;
+  }
+  const uint16_t ordinal = index.ordinalForRow(sortOrder, static_cast<uint16_t>(rowFor(entry)));
+  library::ClixRecord record{};
+  return ordinal != 0xFFFF && index.readRecord(ordinal, record) && index.readPath(record, path);
+}
+
+int LibraryListActivity::cachedProgress(const std::string& path) {
+  for (const auto& entry : progressCache) {
+    if (entry.first == path) return entry.second;
+  }
+  // Loading opens the book, so only a few per screen: the rest fill in on a
+  // later draw instead of stalling this one.
+  if (progressLoadsLeft <= 0) return -2;
+  progressLoadsLeft--;
+  constexpr size_t MAX_CACHED = 24;
+  if (progressCache.empty()) progressCache.reserve(MAX_CACHED);
+  if (progressCache.size() >= MAX_CACHED) progressCache.clear();
+  const int percent = loadBookProgress(path);
+  progressCache.emplace_back(path, percent);
+  return percent;
+}
+
 const char* LibraryListActivity::visibleTagLabel(const shelfstatus::Tag tag) const {
   if (tag == shelfstatus::Tag::Queued && activeTabIndex == QUEUE_TAB) return nullptr;
   if (tag == shelfstatus::Tag::Read && activeTabIndex == READ_TAB) return nullptr;
@@ -648,7 +679,6 @@ void LibraryListActivity::swipeDelete(const int entry) {
 // the filter) around it.
 void LibraryListActivity::promptRebuildIndex() {
   RenderLock lock(*this);
-  GUI.drawPopup(renderer, tr(STR_LIBRARY_REBUILDING));
   index.close();
   rebuildIndex();
   if (!index.open(library::libraryIndexPath())) LOG_ERR("LIB", "cannot open library index");
@@ -745,7 +775,6 @@ void LibraryListActivity::promptDeleteBookByPath(const std::string& path, const 
         LOG_DBG("LIB", "deleting %s", path.c_str());
         if (!removeBookFile(path)) LOG_ERR("LIB", "cannot delete %s", path.c_str());
         RECENT_BOOKS.removeByPath(path);  // saves on removal
-        GUI.drawPopup(renderer, tr(STR_LIBRARY_REBUILDING));
         rebuildIndex();
       }
       if (!index.open(library::libraryIndexPath())) LOG_ERR("LIB", "cannot reopen library index");
@@ -1270,6 +1299,8 @@ void LibraryListActivity::buildRows(UiScreen& screen) {
   const size_t cap = static_cast<size_t>(nav.visibleRows > 0 ? nav.visibleRows : 1) + 1;
   if (winTitles.size() < cap) winTitles.resize(cap);
   if (winAuthors.size() < cap) winAuthors.resize(cap);
+  if (winValues.size() < cap) winValues.resize(cap);
+  progressLoadsLeft = 6;
   if (!groupsCollapsed && winHeaders.size() < cap) winHeaders.resize(cap);
   winItems.clear();
   if (winItems.capacity() < cap) winItems.reserve(cap);
@@ -1303,6 +1334,16 @@ void LibraryListActivity::buildRows(UiScreen& screen) {
       // The status sits at the row's right edge, where the cover view puts it
       // on the art.
       item.value = visibleTagLabel(tag);
+      // A book in progress shows how far along it is instead of the word.
+      std::string fullPath;
+      if (tag == shelfstatus::Tag::Reading && item.value && pathForEntry(entry, fullPath)) {
+        const int percent = cachedProgress(fullPath);
+        if (percent >= 0) {
+          std::string& text = winValues[static_cast<size_t>(rows)];
+          text = std::to_string(percent) + "%";
+          item.value = text.c_str();
+        }
+      }
     }
 
     item.label = title.c_str();

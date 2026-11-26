@@ -9,6 +9,7 @@
 #include "components/UITheme.h"
 #include "fontIds.h"
 #include "util/BookCacheUtils.h"
+#include "util/BusyIndicator.h"
 
 void ClearCacheActivity::onEnter() {
   Activity::onEnter();
@@ -62,7 +63,7 @@ void ClearCacheActivity::render(RenderLock&&) {
   if (state == FAILED) {
     renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2 - 20, tr(STR_CLEAR_CACHE_FAILED), true,
                               EpdFontFamily::BOLD);
-    renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2 + 10, tr(STR_CHECK_SERIAL_OUTPUT));
+    renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2 + 10, tr(STR_CHECK_SD_RETRY));
 
     const auto labels = mappedInput.mapLabels(tr(STR_BACK), "", "", "");
     GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
@@ -97,6 +98,7 @@ void ClearCacheActivity::clearCache() {
   clearedCount = 0;
   failedCount = 0;
   char name[128];
+  BusyIndicator busy(renderer, tr(STR_CLEARING_CACHE));
 
   // Iterate through all entries in the directory
   for (auto file = root.openNextFile(); file; file = root.openNextFile()) {
@@ -110,6 +112,7 @@ void ClearCacheActivity::clearCache() {
 
       file.close();  // Close before attempting to delete
 
+      busy.tick();
       if (Storage.removeDir(fullPath.c_str())) {
         clearedCount++;
       } else {

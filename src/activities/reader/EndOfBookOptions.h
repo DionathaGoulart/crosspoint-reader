@@ -15,7 +15,7 @@ class MappedInputManager;
 // plain-title look and behavior.
 class EndOfBookOptions : private UiAppHost {
  public:
-  enum class Action { None, Redraw, OpenBook, GoHome, LastPage };
+  enum class Action { None, Redraw, OpenBook, GoHome, GoLibrary, LastPage };
 
   static constexpr size_t MAX_SUGGESTIONS = 3;
 
@@ -62,7 +62,7 @@ class EndOfBookOptions : private UiAppHost {
   // buildListScreen(): names.size() is capped at MAX_SUGGESTIONS and never
   // changes afterward, so a fixed-capacity array avoids any heap allocation
   // for the row list, both at load time and every subsequent repaint.
-  static constexpr size_t MAX_ROWS = MAX_SUGGESTIONS + 1;  // + the trailing "Home" row
+  static constexpr size_t MAX_ROWS = MAX_SUGGESTIONS + 2;  // + the "Library" and "Home" rows
   std::string rowLabels[MAX_ROWS];
   freeink::ui::ListItem rowItems[MAX_ROWS]{};
   size_t rowCount = 0;

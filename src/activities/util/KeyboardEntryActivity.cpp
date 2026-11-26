@@ -299,6 +299,7 @@ bool KeyboardEntryActivity::activateValue(const int16_t value, const bool longPr
       // full-screen e-ink repaint for an unchanged keyboard costs a second.
       if (nextId == layoutId) return false;
       layoutId = nextId;
+      keyboard_layouts::rememberLayout(nextId);
       // Shift is per-layer: carrying it across would strand the new layout in
       // upper case. Row widths differ between scripts (Cyrillic runs 12/11/11
       // against Latin's 10/9/9), so the selection has to be re-clamped.

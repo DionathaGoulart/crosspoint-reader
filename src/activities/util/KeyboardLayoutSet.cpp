@@ -44,7 +44,20 @@ uint16_t enabled() {
                                layoutBit(freeink::ui::KeyboardLayoutId::QwertyEn));
 }
 
+namespace {
+// The layout the reader last switched to, kept until reboot so a second field
+// opens on it instead of the UI language's layout.
+freeink::ui::KeyboardLayoutId lastChosen = freeink::ui::KeyboardLayoutId::QwertyEn;
+bool haveLastChosen = false;
+}  // namespace
+
+void rememberLayout(const freeink::ui::KeyboardLayoutId id) {
+  lastChosen = id;
+  haveLastChosen = true;
+}
+
 freeink::ui::KeyboardLayoutId startingLayout() {
+  if (haveLastChosen && (enabled() & layoutBit(lastChosen))) return lastChosen;
   const freeink::ui::KeyboardLayoutId preferred = forLanguage(I18N.getLanguage());
   if (enabled() & layoutBit(preferred)) return preferred;
   // Switched off: opening on it anyway would ignore a deliberate choice.

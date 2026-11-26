@@ -184,7 +184,7 @@ static void silentRestartTo(const uint32_t target, const char* targetName) {
   // through to the new activity. On Home, Select on the default
   // selectorIndex=0 opens the most-recent book, looking like a trampoline back
   // to the reader they just exited.
-  GUI.drawPopup(renderer, tr(STR_LOADING_POPUP));
+  GUI.drawBusyPopup(renderer, tr(STR_LOADING_POPUP), 2);
   delay(50);
   ESP.restart();
 }
@@ -205,7 +205,7 @@ void silentRestartToJoinNetwork() {
 #endif
   armSilentReboot(SILENT_REBOOT_TARGET_JOIN_NETWORK);
   LOG_DBG("MAIN", "Silent restart (target=join-network)");
-  GUI.drawPopup(renderer, tr(STR_LOADING_POPUP));
+  GUI.drawBusyPopup(renderer, tr(STR_LOADING_POPUP), 2);
   delay(50);
   ESP.restart();
 }
@@ -214,7 +214,7 @@ void restartToHomeAfterStorageHandoff() {
   if (deepSleepInProgress) return;  // sleeping supersedes the storage handoff reboot
   armSilentReboot(SILENT_REBOOT_TARGET_HOME);
   LOG_DBG("MAIN", "Restart after storage handoff (target=home)");
-  GUI.drawPopup(renderer, tr(STR_LOADING_POPUP));
+  GUI.drawBusyPopup(renderer, tr(STR_LOADING_POPUP), 2);
   delay(50);
   handoffUsbOtgToSerialJtag();
   ESP.restart();
@@ -415,7 +415,7 @@ static bool joinWifiForSleep(const bool showPopup) {
   }
   // Sleep can be the first WiFi use since boot or deep-sleep wake.
   WIFI_STORE.loadFromFile();
-  if (showPopup) GUI.drawPopup(renderer, tr(STR_LOADING_POPUP));
+  if (showPopup) GUI.drawBusyPopup(renderer, tr(STR_LOADING_POPUP), 2);
   WiFi.mode(WIFI_STA);
   const std::vector<WifiCredential> networks = pickSleepNetworks();
   if (networks.empty()) {
@@ -628,6 +628,51 @@ void enterDeepSleep(bool fromTimeout = false) {
   LOG_DBG("MAIN", "Entering deep sleep");
 
   powerManager.startDeepSleep(gpio, wakeOnHeldButton);
+}
+
+// Warns once as the battery drops through each level, so the reader is not
+// surprised by a power-off mid-chapter. Re-arms after a charge. Checked once a
+// minute: the gauge read is cheap but the popup is not.
+static void warnLowBattery() {
+  static constexpr uint16_t LEVELS[] = {15, 5};
+  static constexpr unsigned long CHECK_INTERVAL_MS = 60000;
+  static constexpr unsigned long POPUP_MS = 2500;
+  static unsigned long nextCheckMs = CHECK_INTERVAL_MS;
+  static unsigned long clearPopupAtMs = 0;  // 0 = no popup on screen
+  static uint8_t warnedLevel = 0;           // lowest level already announced; 0 = none
+
+  // Redraw the screen once the popup has been up long enough. No blocking wait:
+  // the activity keeps running (transfers, input) while it shows.
+  if (clearPopupAtMs != 0 && millis() >= clearPopupAtMs) {
+    clearPopupAtMs = 0;
+    activityManager.requestUpdate();
+  }
+  if (millis() < nextCheckMs) return;
+  nextCheckMs = millis() + CHECK_INTERVAL_MS;
+
+  uint16_t percent = 0;
+  if (!powerManager.readBatteryPercentage(percent)) return;
+  if (gpio.isUsbConnected() || percent > LEVELS[0] + 5) {
+    warnedLevel = 0;
+    return;
+  }
+  // Not over a transfer or update: a popup there is not worth interrupting it.
+  if (activityManager.preventAutoSleep() || !renderer.hasFrameBuffer()) return;
+
+  // Announce the lowest level already crossed, once.
+  uint8_t crossed = 0;
+  for (const uint16_t level : LEVELS) {
+    if (percent <= level) crossed = static_cast<uint8_t>(level);
+  }
+  if (crossed == 0 || (warnedLevel != 0 && warnedLevel <= crossed)) return;
+  warnedLevel = crossed;
+  char text[48];
+  snprintf(text, sizeof(text), tr(STR_LOW_BATTERY), static_cast<unsigned>(percent));
+  {
+    RenderLock lock;
+    GUI.drawPopup(renderer, text);
+  }
+  clearPopupAtMs = millis() + POPUP_MS;
 }
 
 void setupDisplayAndFonts(bool seamless = false) {
@@ -1191,6 +1236,8 @@ void loop() {
   if (gpio.wasUsbStateChanged() && !activityManager.isReaderActivity()) {
     activityManager.requestUpdate();
   }
+
+  warnLowBattery();
 
   const unsigned long activityStartTime = millis();
   activityManager.loop();

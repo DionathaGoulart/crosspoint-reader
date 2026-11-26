@@ -75,7 +75,7 @@ void LibraryCoverGrid::resolvePage(const int first, const int count, const int t
   }
 
   if (needsGeneration) {
-    GUI.drawPopup(renderer, tr(STR_LOADING_POPUP));
+    GUI.drawBusyPopup(renderer, tr(STR_LOADING_POPUP), 2);
     popupShown = true;
     for (int i = 0; i < cells; ++i) {
       if (!missing[i]) continue;

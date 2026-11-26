@@ -188,7 +188,7 @@ void AboutActivity::onEnter() {
   // onEnter runs without the render lock; take it for the popup.
   {
     RenderLock lock;
-    GUI.drawPopup(renderer, tr(STR_LOADING_POPUP));
+    GUI.drawBusyPopup(renderer, tr(STR_LOADING_POPUP), 2);
   }
   // The firmware does not boot without a card, so About always has one.
   const uint64_t sdTotal = Storage.sdTotalBytes();

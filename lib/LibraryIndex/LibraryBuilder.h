@@ -66,7 +66,11 @@ struct BuildStats {
 // book over its filename. It reads an existing cache when available; otherwise
 // it stops the normal EPUB parser at the end of <metadata>, before the manifest,
 // without building the reader's spine, TOC, CSS, or section caches.
-bool buildLibraryIndex(const char* rootPath, BuildStats& stats, bool readMetadata = false);
+// `progress` is called every few books during the walk so a screen can show the
+// build is alive. It runs synchronously on the caller's task during the walk and must not touch the index.
+using ProgressFn = void (*)(void* ctx, uint16_t books);
+bool buildLibraryIndex(const char* rootPath, BuildStats& stats, bool readMetadata = false,
+                       ProgressFn progress = nullptr, void* progressCtx = nullptr);
 
 // Live index path, shared by the builder and activity.
 const char* libraryIndexPath();

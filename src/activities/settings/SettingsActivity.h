@@ -197,6 +197,9 @@ enum class ControlsGroup : uint8_t { Root, Power, Front, Side, Touch };
 class SettingsActivity final : public UiListActivity {
   const SettingsSection section;
   const ControlsGroup controlsGroup;
+  // Non-empty: show every setting whose name contains this text, from all
+  // sections (section is End then).
+  const std::string query;
   std::vector<SettingInfo> settings;
 
   bool preserveQuickResumeTimeoutOn = false;
@@ -227,7 +230,7 @@ class SettingsActivity final : public UiListActivity {
 
  public:
   SettingsActivity(GfxRenderer& renderer, MappedInputManager& mappedInput, SettingsSection section,
-                   ControlsGroup controlsGroup = ControlsGroup::Root);
+                   ControlsGroup controlsGroup = ControlsGroup::Root, std::string query = {});
   void onEnter() override;
   void render(RenderLock&& lock) override;
 };

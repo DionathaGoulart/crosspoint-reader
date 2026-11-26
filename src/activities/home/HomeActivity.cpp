@@ -28,6 +28,7 @@
 #include "fontIds.h"
 #include "util/BookProgress.h"
 #include "util/BookThumbnail.h"
+#include "util/BusyIndicator.h"
 
 // The menu order lives in two lists that have to agree: this file's
 // (indexToMenuItem, getMenuItemCount) and CoverGridHomeUi's tab icons. They
@@ -84,9 +85,9 @@ void HomeActivity::fillCoverGridFromLibrary() {
   auto& record = reader->record;
   if (!index.open(library::libraryIndexPath())) {
     index.close();
-    GUI.drawPopup(renderer, tr(STR_LIBRARY_REBUILDING));
+    BusyIndicator busy(renderer, tr(STR_LIBRARY_REBUILDING));
     library::BuildStats stats;
-    if (!library::buildLibraryIndex("/", stats, SETTINGS.libraryUseMetadata != 0) ||
+    if (!library::buildLibraryIndex("/", stats, SETTINGS.libraryUseMetadata != 0, BusyIndicator::onProgress, &busy) ||
         !index.open(library::libraryIndexPath())) {
       LOG_ERR("HOME", "Cannot populate cover grid from library");
       return;
@@ -141,7 +142,7 @@ void HomeActivity::loadGridCover(RecentBook& book, int height, bool& showingLoad
   if (bookthumb::isCached(book.path, height, book.coverBmpPath)) return;
   if (!showingLoading) {
     showingLoading = true;
-    popupRect = GUI.drawPopup(renderer, tr(STR_LOADING_POPUP));
+    popupRect = GUI.drawBusyPopup(renderer, tr(STR_LOADING_POPUP), 2);
     GUI.fillPopupProgress(renderer, popupRect, 0);
   }
   bookthumb::ensure(book.path, height, book.coverBmpPath);

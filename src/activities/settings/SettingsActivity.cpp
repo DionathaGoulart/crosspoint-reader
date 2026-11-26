@@ -42,6 +42,7 @@
 #include "components/UIThemeTokens.h"
 #include "components/UiAppHelpers.h"
 #include "fontIds.h"
+#include "util/BusyIndicator.h"
 #include "util/PluginEvents.h"
 
 namespace fui = freeink::ui;
@@ -113,6 +114,19 @@ bool belongsToControlsGroup(const SettingInfo& setting, ControlsGroup group) {
   return false;
 }
 
+// ASCII case-insensitive substring test; non-ASCII bytes compare exactly.
+bool containsNoCase(const char* text, const std::string& needle) {
+  const auto lower = [](const char ch) { return static_cast<char>(ch >= 'A' && ch <= 'Z' ? ch + ('a' - 'A') : ch); };
+  const size_t length = std::strlen(text);
+  if (needle.size() > length) return false;
+  for (size_t start = 0; start + needle.size() <= length; start++) {
+    size_t k = 0;
+    while (k < needle.size() && lower(text[start + k]) == lower(needle[k])) k++;
+    if (k == needle.size()) return true;
+  }
+  return false;
+}
+
 // Device-only action rows added per section, beyond the shared list.
 constexpr size_t EXTRA_ROWS_PER_SECTION = 6;
 }  // namespace
@@ -125,11 +139,14 @@ void SettingsActivity::rebuildSettings() {
   // Rescan /dictionaries on every rebuild to pick up dictionaries copied to the
   // SD card since the last visit. Only the Reader section shows the row.
   std::vector<DictionaryEntry> dictionaries;
-  if (section == SettingsSection::Reader) DictionaryRegistry::discover(dictionaries);
+  if (section == SettingsSection::Reader || !query.empty()) DictionaryRegistry::discover(dictionaries);
 
   auto all = getSettingsList(&sdFontSystem.registry(), &dictionaries);
 
-  const auto include = [this](const SettingInfo& setting) {
+  const bool searching = !query.empty();
+  const auto matches = [this](const StrId name) { return containsNoCase(I18N.get(name), query); };
+  const auto include = [&](const SettingInfo& setting) {
+    if (searching) return showOnDevice(setting) && matches(setting.nameId);
     return sectionFor(setting) == section && showOnDevice(setting) &&
            (section != SettingsSection::Controls || belongsToControlsGroup(setting, controlsGroup));
   };
@@ -137,8 +154,8 @@ void SettingsActivity::rebuildSettings() {
   settings.clear();
   settings.reserve(count + EXTRA_ROWS_PER_SECTION);
 
-  const auto addAction = [this](SettingsSection target, StrId name, SettingAction action) {
-    if (target == section) settings.push_back(SettingInfo::Action(name, action));
+  const auto addAction = [&](SettingsSection target, StrId name, SettingAction action) {
+    if (searching ? matches(name) : target == section) settings.push_back(SettingInfo::Action(name, action));
   };
 
   // Language leads so a user stuck in an unfamiliar language finds it first.
@@ -181,8 +198,9 @@ void SettingsActivity::rebuildSettings() {
     // UI Font follows Refresh Frequency, where the theme picker used to be.
     const bool beforeUiFont = setting.key && std::strcmp(setting.key, "refreshFrequency") == 0;
     settings.push_back(std::move(setting));
-    if (beforeUiFont) addAction(SettingsSection::Display, StrId::STR_UI_FONT, SettingAction::UiFont);
+    if (beforeUiFont && !searching) addAction(SettingsSection::Display, StrId::STR_UI_FONT, SettingAction::UiFont);
   }
+  if (searching) addAction(SettingsSection::Display, StrId::STR_UI_FONT, SettingAction::UiFont);
 
   if (section == SettingsSection::Controls && controlsGroup == ControlsGroup::Front) {
     for (const char* key : {"longPressButtonBehavior", "longPressMenuFunction"}) {
@@ -224,8 +242,11 @@ void SettingsActivity::rebuildSettings() {
 }
 
 SettingsActivity::SettingsActivity(GfxRenderer& renderer, MappedInputManager& mappedInput,
-                                   const SettingsSection section, const ControlsGroup controlsGroup)
-    : UiListActivity("Settings", renderer, mappedInput), section(section), controlsGroup(controlsGroup) {}
+                                   const SettingsSection section, const ControlsGroup controlsGroup, std::string query)
+    : UiListActivity("Settings", renderer, mappedInput),
+      section(section),
+      controlsGroup(controlsGroup),
+      query(std::move(query)) {}
 
 void SettingsActivity::onEnter() {
   UiListActivity::onEnter();
@@ -267,6 +288,7 @@ const char* SettingsActivity::headerTitle() const {
     case ControlsGroup::Root:
       break;
   }
+  if (section == SettingsSection::End) return tr(STR_SEARCH);
   return I18N.get(SETTINGS_SECTION_TITLES[static_cast<size_t>(section)]);
 }
 
@@ -459,9 +481,10 @@ void SettingsActivity::toggleSelectedSetting() {
         // Blocking, like the Library screen's own rebuild: the walk needs the
         // card to itself, so the render task stays locked out.
         RenderLock lock;
-        GUI.drawPopup(renderer, tr(STR_LIBRARY_REBUILDING));
+        BusyIndicator busy(renderer, tr(STR_LIBRARY_REBUILDING));
         library::BuildStats stats;
-        const bool ok = library::buildLibraryIndex("/", stats, SETTINGS.libraryUseMetadata != 0);
+        const bool ok =
+            library::buildLibraryIndex("/", stats, SETTINGS.libraryUseMetadata != 0, BusyIndicator::onProgress, &busy);
         if (!ok) LOG_ERR("SET", "library index build failed");
         GUI.drawPopup(renderer, ok ? tr(STR_LIBRARY_REBUILD_DONE) : tr(STR_LIBRARY_REBUILD_FAILED));
         delay(1000);

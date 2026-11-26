@@ -12,6 +12,8 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <cstdio>
+#include <cstring>
 #include <string>
 
 #include "I18n.h"
@@ -26,6 +28,7 @@
 #include "components/icons/cover.h"
 #include "components/icons/headerIcons.h"
 #include "fontIds.h"
+#include "util/ReadingPace.h"
 
 void BaseTheme::setCheckboxRow(freeink::ui::ListItem& item, const bool checked) {
   item.value = nullptr;
@@ -517,6 +520,28 @@ void BaseTheme::drawSubHeader(const GfxRenderer& renderer, Rect rect, const char
 }
 
 Rect BaseTheme::drawPopup(const GfxRenderer& renderer, const char* message) const {
+  return drawPopupWithDots(renderer, message, 0);
+}
+
+Rect BaseTheme::drawBusyPopup(const GfxRenderer& renderer, const char* message, const uint8_t step) const {
+  return drawPopupWithDots(renderer, message, 1 + step % 3);
+}
+
+Rect BaseTheme::drawPopupWithDots(const GfxRenderer& renderer, const char* message, const uint8_t dots) const {
+  // The box is sized for the full "..." and the text starts at a fixed x, so the
+  // message does not shift as dots appear. Dots already in the message are dropped.
+  char sized[96];
+  char shown[96];
+  const char* sizedText = message;
+  const char* shownText = message;
+  if (dots > 0) {
+    int len = static_cast<int>(strnlen(message, sizeof(sized) - 4));
+    while (len > 0 && message[len - 1] == '.') len--;
+    snprintf(sized, sizeof(sized), "%.*s...", len, message);
+    snprintf(shown, sizeof(shown), "%.*s%.*s", len, message, dots, "...");
+    sizedText = sized;
+    shownText = shown;
+  }
   const auto& metrics = UITheme::getInstance().getMetrics();
   const int marginX = metrics.popupMarginX;
   const int marginY = metrics.popupMarginY;
@@ -524,7 +549,7 @@ Rect BaseTheme::drawPopup(const GfxRenderer& renderer, const char* message) cons
   const EpdFontFamily::Style popupFontFamily = metrics.popupTextBold ? EpdFontFamily::BOLD : EpdFontFamily::REGULAR;
   // Scale y position proportionally to screen height
   const int y = static_cast<int>(renderer.getScreenHeight() * metrics.popupTopOffsetRatio);
-  const int textWidth = renderer.getTextWidth(UI_12_FONT_ID, message, popupFontFamily);
+  const int textWidth = renderer.getTextWidth(UI_12_FONT_ID, sizedText, popupFontFamily);
   const int textHeight = renderer.getLineHeight(UI_12_FONT_ID);
   const int w = textWidth + marginX * 2;
   const int h = textHeight + marginY * 2;
@@ -546,7 +571,7 @@ Rect BaseTheme::drawPopup(const GfxRenderer& renderer, const char* message) cons
 
   const int textX = x + (w - textWidth) / 2;
   const int textY = y + marginY + metrics.popupTextBaselineOffsetY;
-  renderer.drawText(UI_12_FONT_ID, textX, textY, message, metrics.popupTextInverted, popupFontFamily);
+  renderer.drawText(UI_12_FONT_ID, textX, textY, shownText, metrics.popupTextInverted, popupFontFamily);
   renderer.displayBuffer();
   return Rect{x, y, w, h};
 }
@@ -602,19 +627,37 @@ void BaseTheme::drawStatusBar(GfxRenderer& renderer, const float bookProgress, c
   int leftClusterWidth = 0;
   int rightClusterWidth = 0;
 
-  if (sb.showBookProgressPercent || sb.showChapterPageCount) {
+  // Pace is learned from the reader's own page draws; the settings preview
+  // (fillMargin false) shows a fixed example instead.
+  int minutesLeft = -1;
+  if (sb.showTimeLeft) {
+    if (fillMargin) {
+      minutesLeft = readingpace::minutesLeft(pageCount - currentPage);
+    } else {
+      minutesLeft = 4;
+    }
+  }
+
+  if (sb.showBookProgressPercent || sb.showChapterPageCount || minutesLeft >= 0) {
     // Right aligned text for progress counter
-    char progressStr[32];
+    char progressStr[48];
 
     // Draw the estimate marker separately so it can use the next UI font size.
-    const bool showEstimate = pageCountEstimated && sb.showChapterPageCount;
+    const bool showEstimate = pageCountEstimated && sb.showChapterPageCount && minutesLeft < 0;
+
+    char timeStr[16] = "";
+    if (minutesLeft >= 0) snprintf(timeStr, sizeof(timeStr), tr(STR_MINUTES_LEFT_FORMAT), minutesLeft);
+    const char* const gap = timeStr[0] != '\0' ? "  " : "";
 
     if (sb.showBookProgressPercent && sb.showChapterPageCount) {
-      snprintf(progressStr, sizeof(progressStr), "%d/%d  %.0f%%", currentPage, pageCount, bookProgress);
+      snprintf(progressStr, sizeof(progressStr), "%s%s%d/%d  %.0f%%", timeStr, gap, currentPage, pageCount,
+               bookProgress);
     } else if (sb.showBookProgressPercent) {
-      snprintf(progressStr, sizeof(progressStr), "%.0f%%", bookProgress);
+      snprintf(progressStr, sizeof(progressStr), "%s%s%.0f%%", timeStr, gap, bookProgress);
+    } else if (sb.showChapterPageCount) {
+      snprintf(progressStr, sizeof(progressStr), "%s%s%d/%d", timeStr, gap, currentPage, pageCount);
     } else {
-      snprintf(progressStr, sizeof(progressStr), "%d/%d", currentPage, pageCount);
+      snprintf(progressStr, sizeof(progressStr), "%s", timeStr);
     }
 
     int progressTextWidth = renderer.getTextWidth(SMALL_FONT_ID, progressStr);

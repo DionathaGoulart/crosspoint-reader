@@ -269,6 +269,9 @@ bool ReaderActivity::handleEndOfBookMenu(const bool suppressConfirmRelease) {
     case EndOfBookOptions::Action::GoHome:
       onGoHome();
       return true;
+    case EndOfBookOptions::Action::GoLibrary:
+      activityManager.goToLibrary();
+      return true;
     case EndOfBookOptions::Action::LastPage:
       onReturnFromEndOfBook();
       requestUpdate();

@@ -261,6 +261,7 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
   // Night mode: inverted output polarity, applied to every activity per
   // render by ActivityManager. The sleep screen opts out itself.
   uint8_t screenInverted = 0;
+  uint8_t uiBoldText = 0;  // bold row labels in menus and lists
   // Sleep screen cover mode settings
   uint8_t sleepScreenCoverMode = FIT;
   // Sleep screen cover filter
@@ -268,6 +269,7 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
   // Status bar settings
   uint8_t statusBarChapterPageCount = 1;
   uint8_t statusBarBookProgressPercentage = 1;
+  uint8_t statusBarTimeLeft = 0;
   uint8_t statusBarProgressBar = HIDE_PROGRESS;
   uint8_t statusBarProgressBarThickness = PROGRESS_BAR_NORMAL;
   uint8_t statusBarTitle = CHAPTER_TITLE;
@@ -574,6 +576,7 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
   struct StatusBarSpec {
     bool showChapterPageCount = false;
     bool showBookProgressPercent = false;
+    bool showTimeLeft = false;
     uint8_t titleMode = HIDE_TITLE;  // STATUS_BAR_TITLE
     bool showBattery = false;
     bool showBatteryPercent = false;
@@ -589,7 +592,7 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
     // Visibility of the text lane. Clock hardware presence is the caller's
     // concern: pass halClock.isAvailable(), or true for layout reservation.
     bool textLaneVisible(bool clockAvailable) const {
-      return showChapterPageCount || showBookProgressPercent || showsTitle() || showBattery ||
+      return showChapterPageCount || showBookProgressPercent || showTimeLeft || showsTitle() || showBattery ||
              (showsClock() && clockAvailable);
     }
   };

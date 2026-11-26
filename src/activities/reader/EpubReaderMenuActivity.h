@@ -71,6 +71,9 @@ class EpubReaderMenuActivity final : public UiListActivity {
   bool handleButtons() override;
   // Header via GUI.drawHeader inside the safe area for the battery indicator.
   void drawChrome() override;
+  // What holding Confirm or a page button does, for the line under the list.
+  std::string longPressHint() const;
+  int hintLineHeight() const;
 
   void closeCancelled();
 

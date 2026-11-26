@@ -209,7 +209,7 @@ void EpubReaderClippingListActivity::render(RenderLock&& lock) {
   if (confirmPopup.processRender(renderer, mappedInput)) return;
   if (initialListRender && listCount() > 0) {
     renderer.clearScreen();
-    GUI.drawPopup(renderer, tr(STR_LOADING_POPUP));
+    GUI.drawBusyPopup(renderer, tr(STR_LOADING_POPUP), 2);
   }
   initialListRender = false;
   UiListActivity::render(std::move(lock));

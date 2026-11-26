@@ -21,6 +21,7 @@ namespace {
 enum MenuItem {
   ITEM_CHAPTER_PAGE_COUNT = 0,
   ITEM_BOOK_PROGRESS_PERCENTAGE,
+  ITEM_TIME_LEFT,
   ITEM_PROGRESS_BAR,
   ITEM_PROGRESS_BAR_THICKNESS,
   ITEM_TITLE,
@@ -38,6 +39,7 @@ static_assert(FULL_MENU_ITEMS == StatusBarSettingsActivity::MAX_STATUS_BAR_ITEMS
 const StrId menuNames[FULL_MENU_ITEMS] = {
     StrId::STR_CHAPTER_PAGE_COUNT,
     StrId::STR_BOOK_PROGRESS_PERCENTAGE,
+    StrId::STR_TIME_LEFT,
     StrId::STR_PROGRESS_BAR,
     StrId::STR_PROGRESS_BAR_THICKNESS,
     StrId::STR_TITLE,
@@ -124,6 +126,9 @@ void StatusBarSettingsActivity::handleSelection() {
     case ITEM_BOOK_PROGRESS_PERCENTAGE:
       SETTINGS.statusBarBookProgressPercentage = (SETTINGS.statusBarBookProgressPercentage + 1) % 2;
       break;
+    case ITEM_TIME_LEFT:
+      SETTINGS.statusBarTimeLeft = (SETTINGS.statusBarTimeLeft + 1) % 2;
+      break;
     case ITEM_PROGRESS_BAR:
       optionPopup.show(StrId::STR_PROGRESS_BAR, progressBarNames, PROGRESS_BAR_ITEMS, SETTINGS.statusBarProgressBar,
                        [this](int idx) {
@@ -203,6 +208,7 @@ void StatusBarSettingsActivity::buildScreen(UiScreen& screen) {
   }
   GUI.setCheckboxRow(rowItems_[ITEM_CHAPTER_PAGE_COUNT], SETTINGS.statusBarChapterPageCount);
   GUI.setCheckboxRow(rowItems_[ITEM_BOOK_PROGRESS_PERCENTAGE], SETTINGS.statusBarBookProgressPercentage);
+  GUI.setCheckboxRow(rowItems_[ITEM_TIME_LEFT], SETTINGS.statusBarTimeLeft);
   GUI.setCheckboxRow(rowItems_[ITEM_BATTERY], SETTINGS.statusBarBattery);
 
   fui::ListProps props;

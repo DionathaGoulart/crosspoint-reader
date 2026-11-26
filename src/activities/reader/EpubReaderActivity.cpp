@@ -63,6 +63,7 @@
 #include "sync/SyncEngine.h"
 #include "util/BookmarkUtil.h"
 #include "util/ButtonNavigator.h"
+#include "util/ReadingPace.h"
 #include "util/ScreenshotUtil.h"
 
 namespace {
@@ -272,7 +273,7 @@ bool EpubReaderActivity::loadBook() {
   const bool uncached = !Storage.exists((loadedEpub->getCachePath() + "/book.bin").c_str());
   if (uncached) {
     disableFastInitialRefresh();
-    GUI.drawPopup(renderer, tr(STR_INDEXING));
+    GUI.drawBusyPopup(renderer, tr(STR_INDEXING), 2);
   }
 
   bool loaded;
@@ -431,7 +432,7 @@ bool EpubReaderActivity::buildTickHeapGate() {
 
 void EpubReaderActivity::showBuildPopup(GfxRenderer& renderer, int& pagesUntilFullRefresh) {
   if (!buildPopupPending || !renderer.hasFrameBuffer()) return;
-  GUI.drawPopup(renderer, tr(STR_INDEXING));
+  GUI.drawBusyPopup(renderer, tr(STR_INDEXING), 2);
   pagesUntilFullRefresh = 1;
   buildPopupPending = false;
 }
@@ -1826,10 +1827,10 @@ void EpubReaderActivity::renderBook() {
 
       const bool needsFullBuild = pendingPercentJump;
       if (needsFullBuild) {
-        GUI.drawPopup(renderer, tr(STR_INDEXING));
+        GUI.drawBusyPopup(renderer, tr(STR_INDEXING), 2);
         pagesUntilFullRefresh = 1;
         const auto popupFn = [this]() {
-          if (renderer.hasFrameBuffer()) GUI.drawPopup(renderer, tr(STR_INDEXING));
+          if (renderer.hasFrameBuffer()) GUI.drawBusyPopup(renderer, tr(STR_INDEXING), 2);
         };
         if (!makeRoomForChapterBuild()) {
           section.reset();
@@ -1867,7 +1868,7 @@ void EpubReaderActivity::renderBook() {
                                              target > BUILD_POPUP_PAGE_THRESHOLD);
           }
           if (showPopup) {
-            GUI.drawPopup(renderer, tr(STR_INDEXING));
+            GUI.drawBusyPopup(renderer, tr(STR_INDEXING), 2);
             pagesUntilFullRefresh = 1;
           }
           buildPopupPending = !showPopup;
@@ -1972,7 +1973,7 @@ void EpubReaderActivity::renderBook() {
     return;
   }
   if (section->isPartial() && section->currentPage >= static_cast<int>(section->pageCount)) {
-    GUI.drawPopup(renderer, tr(STR_INDEXING));
+    GUI.drawBusyPopup(renderer, tr(STR_INDEXING), 2);
     pagesUntilFullRefresh = 1;
   }
   while (section->isPartial() && section->currentPage >= static_cast<int>(section->pageCount)) {
@@ -2625,6 +2626,7 @@ void EpubReaderActivity::renderStatusBar() const {
     title = epub ? epub->getTitle() : "";
   }
 
+  readingpace::notePage(currentPage, pageCount);
   GUI.drawStatusBar(renderer, bookProgress, currentPage, pageCount, title, 0, textYOffset, true, currentPageBookmarked,
                     section ? section->isBuilding() : false);
 }

@@ -317,6 +317,8 @@ struct WalkState {
   uint16_t priorCount = 0;
   uint16_t reused = 0;
   uint32_t serviceUnits = 0;
+  ProgressFn progress = nullptr;
+  void* progressCtx = nullptr;
 };
 
 // Bound to shownTitle when a book told us nothing. A `std::string()` temporary
@@ -501,6 +503,7 @@ int findPrior(WalkState& st, const uint64_t pathHash) {
 
   st.stageOut->write(&entry, STAGE_STRIDE);
   st.books++;
+  if (st.progress && (st.books & 0x7u) == 0) st.progress(st.progressCtx, st.books);
   return true;
 }
 
@@ -1174,7 +1177,8 @@ bool markLibraryIndexDirty() {
 
 bool isLibraryIndexDirty() { return dirtyInMemory || Storage.exists(DIRTY_PATH); }
 
-bool buildLibraryIndex(const char* rootPath, BuildStats& stats, const bool readMetadata) {
+bool buildLibraryIndex(const char* rootPath, BuildStats& stats, const bool readMetadata, const ProgressFn progress,
+                       void* const progressCtx) {
   const uint32_t startMs = millis();
   uint32_t serviceUnits = 0;
   stats = BuildStats{};
@@ -1256,6 +1260,8 @@ bool buildLibraryIndex(const char* rootPath, BuildStats& stats, const bool readM
   st.readMetadata = readMetadata;
   st.previous = previous.isOpen() ? &previous : nullptr;
   st.stats = &stats;
+  st.progress = progress;
+  st.progressCtx = progressCtx;
 
   if (!Storage.openFileForWrite("LIBIDX", STAGE_PATH, st.stage) ||
       !Storage.openFileForWrite("LIBIDX", folderStagePath, st.folders)) {

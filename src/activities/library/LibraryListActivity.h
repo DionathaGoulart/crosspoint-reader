@@ -246,6 +246,14 @@ class LibraryListActivity final : public UiTabListActivity, private LibraryCover
   std::vector<std::string> winTitles;
   std::vector<std::string> winAuthors;
   std::vector<std::string> winHeaders;
+  std::vector<std::string> winValues;
+  // Saved percentage per reading book; loading one opens the book, so each is
+  // read once. Small and bounded: only books tagged Reading are looked up.
+  std::vector<std::pair<std::string, int>> progressCache;
+  // -1 unreadable, -2 not loaded (the per-render load budget ran out).
+  int cachedProgress(const std::string& path);
+  int progressLoadsLeft = 0;
+  bool pathForEntry(int entry, std::string& path);
 
   // Pinned overlay state: per store entry its RecentAsc row (0xFFFF when the
   // book is not in the index), and the current-direction rows to skip, sorted
