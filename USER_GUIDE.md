@@ -122,7 +122,7 @@ A card that already has settings from an older firmware does not open the guide.
 
 The Home screen is the main entry point to the firmware. From here you can navigate to **[Reading Mode](#4-reading-mode)** with the most recently read book, **[Browse Files](#33-browse-files-screen)**, the **[Library](#34-library-screen)**, **Statistics**, **[File Transfer](#35-file-transfer-screen)**, or **[Settings](#36-settings)**. Plugins or an OPDS catalog appear as one further entry when either is set up.
 
-The Home screen shows your [reading goals](#364-system) at the top and the book you are reading below them, with its percentage and a progress bar when saved progress is available. If you have not opened a book yet, it shows the newest book in your library instead. On devices with PSRAM the book is shown as its cover, with a **To read**, **Reading**, **Read** or **Rereading** tag on the cover when one applies. On devices without PSRAM (such as the X3 and X4) it is shown as a card with the title, author, that tag and the progress.
+The Home screen shows your [reading goals](#364-system) at the top (unless you turn off **Home: Reading Goals** in Settings → Display) and the book you are reading below them, with its percentage and a progress bar when saved progress is available. If you have not opened a book yet, it shows the newest book in your library instead. On devices with PSRAM the book is shown as its cover (unless you turn off **Home: Book Cover**), with a **To read**, **Reading**, **Read** or **Rereading** tag on the cover when one applies. On devices without PSRAM (such as the X3 and X4) it is shown as a card with the title, author, that tag and the progress.
 
 The menu is a row of icons at the bottom: Browse Files, Library, Statistics, Plugins or OPDS when set up, File Transfer, Settings. **Left** and **Right** move along the icons; **Side Up** and **Side Down** move through the book and then the icons. Press **Back** to resume the book you were reading. On touch devices, tap the book or an icon.
 
@@ -148,7 +148,7 @@ The Library indexes up to 4,096 supported books on the SD card and shows their t
 - **To read** is your reading queue: the books you added with **Add to reading queue**, in the order you added them. A finished book can be queued again to read later. A book leaves the queue when you start reading it (the first time you open an unread book), when you choose **Read again**, or when you finish it. Books being read or reread cannot be added.
 - **Read** lists the books you have finished, the most recently finished first. A book you are reading again (**Read again**) stays here and on Recent with a **Rereading** tag until you finish it.
 
-Books carry a small **To read**, **Reading**, **Read** or **Rereading** tag when one applies, next to the title in the list or on the cover in the cover view.
+Books carry a small **To read**, **Reading**, **Read** or **Rereading** tag when one applies, next to the title in the list or on the cover in the cover view. A book you have started and not finished shows its percentage, such as **38%**, on the cover when it has no tag.
 
 `My Clippings.txt` and `crash_report.txt` are not listed in the Library. They remain available in the file browser.
 
@@ -168,7 +168,7 @@ On a touch device, tap tabs, books, and the Search icon directly. Tap the active
 
 The index is created automatically the first time the Library is opened, and it is rebuilt after books are added through file transfer. To pick up other file changes or updated metadata, choose **Refresh Library** from any book's options, or tap the refresh icon on a touch device. **Settings → Library → Refresh Library** does the same from any device, including when the Library shows no books. The **Use Book Metadata** setting controls whether the index reads titles, authors, series and genre stored inside books. The first time you open the Library after this update, it rebuilds and reads every book again.
 
-**Show Covers in Library** (Settings → Library) replaces the list of names with a shelf of cover art, four covers to a page, two to a row, with the title under each one. Every tab keeps its order, but the shelf does not draw the letter headings that the list view shows. The first time you open each page of the shelf, the reader pauses for a moment while it builds the covers. After that it reads them from the cache. This option needs a device with PSRAM and is not shown on devices without one.
+**Show Covers in Library** (Settings → Library, on by default) replaces the list of names with a shelf of cover art, four covers to a page, two to a row, with the title under each one. Every tab keeps its order, but the shelf does not draw the letter headings that the list view shows. The first time you open each page of the shelf, the reader pauses for a moment while it builds the covers. After that it reads them from the cache. This option needs a device with PSRAM and is not shown on devices without one.
 
 ### 3.5 File Transfer Screen
 
@@ -260,6 +260,15 @@ Settings are grouped into **System**, **Display**, **Reader**, **Controls**, **L
   - "Inverted" - The image will be inverted as in white & black and will be displayed without grayscale conversion
 
 - **Quick Resume on Timeout**: Whether to enable the "Quick Resume" sleep screen when the device goes to sleep due to inactivity (Display > Time to Sleep). This is useful for quickly resuming reading without waiting for the device to fully wake up and load the book. This overwrites the Sleep Screen Cover Mode when enabled.
+
+- **Theme**: The look of menus, lists, headers and button hints. The device-wide choice is saved and applies to every profile:
+  
+  - "Good" - The original GoodTheme
+  - "Pixel Quest", "Terminal DOS", "Arcade HUD", "Handheld OS" (default), "Mono Mac" - Retro skins that change row heights, selection style, header and button hints. Terminal DOS, Pixel Quest and Arcade HUD draw the header white on black.
+
+- **Home: Reading Goals**: Show your reading goals above the current book on the Home screen (default on).
+
+- **Home: Book Cover**: Show the current book as its cover on the Home screen (default on). Turn it off to see a text card with the title, author and progress. Needs a device with PSRAM; without it the text card is always shown, and this setting is hidden.
 
 - **Status Bar**: Configure the status bar displayed while reading:
   

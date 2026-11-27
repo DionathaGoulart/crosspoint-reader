@@ -49,7 +49,7 @@ Check [our Devices page](https://crosspointreader.com/devices) for the full list
   - OPDS browser with saved servers (up to 8), search, pagination, and direct download; hold Back for one second and release in a catalog to return to the main menu
   - OTA update checks and installs from GitHub releases
 
-- **Customization**: night mode, the GoodTheme interface (reading goals above the current book), sleep screen modes including transparent overlays, front/side button remapping, status bar controls, power-button behavior, refresh cadence, and more.
+- **Customization**: night mode, six selectable themes, Home goals and cover toggles, sleep screen modes including transparent overlays, front/side button remapping, status bar controls, power-button behavior, refresh cadence, and more.
 
 - **Localization**: 34 UI languages and counting, including CJK font fallback and RTL support.
 
