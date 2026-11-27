@@ -39,7 +39,7 @@ void CoverGridHomeUi::begin(const std::vector<RecentBook>& recent, const SlotTab
   books = &recent;
   slotTab = slot;
   hasContinueReading = continuing;
-  showCovers = UITheme::supportsCoverGrid();
+  showCovers = UITheme::homeShowsCover();
   if (showCovers && !recent.empty()) coverCache.begin();
   resetUi();
   app.on(SELECT, &CoverGridHomeUi::onAction, this);
@@ -60,7 +60,9 @@ void CoverGridHomeUi::begin(const std::vector<RecentBook>& recent, const SlotTab
   // screen never reads. summaryOnly() still takes a ~22 KB transient
   // aggregate, so it is skipped when no goal is set and nothing would use it.
   summaryLoaded = false;
-  summary = goals::anyEnabled(goalTargetsFromSettings()) ? statsService::summaryOnly(&summaryLoaded) : stats::Summary{};
+  summary = SETTINGS.homeShowGoals && goals::anyEnabled(goalTargetsFromSettings())
+                ? statsService::summaryOnly(&summaryLoaded)
+                : stats::Summary{};
   const bool storesReady = FINISHED_BOOKS.isLoaded();
   for (size_t i = 0; i < coverTags.size(); ++i) {
     coverTags[i] = storesReady && i < recent.size() ? shelfstatus::forPath(recent[i].path) : shelfstatus::Tag::None;
@@ -158,7 +160,7 @@ void CoverGridHomeUi::draw(UiScreen& screen) {
   if (books->empty()) {
     // The goals strip still draws: a reader who has set targets but not yet
     // opened a book should see them, not only the empty-shelf message.
-    drawGoals(screen, screen.takeTop(goalsStripHeight(screen), theme.spaceSm));
+    if (SETTINGS.homeShowGoals) drawGoals(screen, screen.takeTop(goalsStripHeight(screen), theme.spaceSm));
     drawTabs(screen, fitTabWidth(tabRect.inset(fui::Insets{0, COVER_CELL_INSET, 0, COVER_CELL_INSET})));
     drawEmpty(screen);
     drawHeaderBand();
@@ -166,7 +168,7 @@ void CoverGridHomeUi::draw(UiScreen& screen) {
   }
   // Goals above, book below: the targets are the reason to look, the book is
   // the reason to pick the device up, so it keeps whatever the goals leave.
-  drawGoals(screen, screen.takeTop(goalsStripHeight(screen), theme.spaceSm));
+  if (SETTINGS.homeShowGoals) drawGoals(screen, screen.takeTop(goalsStripHeight(screen), theme.spaceSm));
   if (showCovers) {
     drawCurrent(screen, screen.body());
   } else {

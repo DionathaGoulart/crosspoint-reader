@@ -44,6 +44,15 @@ void forEachBaseSetting(SettingVisitor visit, void* context) {
   emit(SettingInfo::Enum(StrId::STR_QUICK_RESUME_TIMEOUT, &CrossPointSettings::quickResumeSleepScreen,
                          {StrId::STR_STATE_OFF, StrId::STR_STATE_ON}, "quickResumeSleepScreen",
                          StrId::STR_CAT_DISPLAY));
+  emit(SettingInfo::Toggle(StrId::STR_HOME_SHOW_GOALS, &CrossPointSettings::homeShowGoals, "homeShowGoals",
+                           StrId::STR_CAT_DISPLAY));
+  {
+    // Emitted on every board so the key round-trips; hidden where it cannot apply (see libraryCoverView).
+    auto cover = SettingInfo::Toggle(StrId::STR_HOME_SHOW_COVER, &CrossPointSettings::homeShowCover, "homeShowCover",
+                                     StrId::STR_CAT_DISPLAY);
+    if (!UITheme::supportsCoverGrid()) cover.withWebHidden();
+    emit(cover);
+  }
   emit(SettingInfo::Enum(StrId::STR_UI_THEME, &CrossPointSettings::uiTheme,
                          {StrId::STR_THEME_GOOD, StrId::STR_THEME_PIXEL_QUEST, StrId::STR_THEME_TERMINAL_DOS,
                           StrId::STR_THEME_ARCADE_HUD, StrId::STR_THEME_HANDHELD_OS, StrId::STR_THEME_MONO_MAC},

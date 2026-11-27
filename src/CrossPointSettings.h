@@ -416,7 +416,11 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
   uint8_t libraryUseMetadata = 1;
   // Library shows a grid of covers instead of a list of titles (0 = list, 1 = covers).
   // Needs PSRAM for the cover cache; ignored where there is none.
-  uint8_t libraryCoverView = 0;
+  uint8_t libraryCoverView = 1;
+  // Home blocks (0 = hidden, 1 = shown). The menu strip always shows: it is the only way to other screens.
+  uint8_t homeShowGoals = 1;
+  // Needs PSRAM for the cover cache; without it Home shows the text card either way.
+  uint8_t homeShowCover = 1;
   // Library Recent tab lists only opened books, without the by-arrival list below them (0 = off, 1 = on)
   uint8_t libraryRecentOpenedOnly = 0;
   // Remove a book from the Recent Books list when its End-of-Book screen is reached (0 = off, 1 = on)

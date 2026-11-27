@@ -183,7 +183,7 @@ void HomeActivity::onEnter() {
   if (coverGridUi) {
     fillCoverGridFromLibrary();
     // Without PSRAM the home draws no covers, so their paths are not needed.
-    if (UITheme::supportsCoverGrid()) resolveGridCoverPaths();
+    if (UITheme::homeShowsCover()) resolveGridCoverPaths();
     const HomeMenuItem slot = slotItem();
     coverGridUi->begin(recentBooks,
                        slot == HomeMenuItem::PLUGINS        ? CoverGridHomeUi::SlotTab::PLUGINS
@@ -306,7 +306,7 @@ void HomeActivity::render(RenderLock&&) {
     renderer.displayBuffer(HalDisplay::FAST_REFRESH);
     return;
   }
-  const bool covers = UITheme::supportsCoverGrid();
+  const bool covers = UITheme::homeShowsCover();
   const auto drawHome = [&] {
     renderer.clearScreen();
     coverGridUi->setSelection(selectorIndex);

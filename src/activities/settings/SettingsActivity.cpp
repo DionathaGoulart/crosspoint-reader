@@ -57,7 +57,11 @@ bool showOnDevice(const SettingInfo& setting) {
   if (setting.valuePtr == &CrossPointSettings::fadingFix && !CrossPointSettings::fadingFixSupported()) return false;
   // The cover shelf keeps its art in PSRAM; without any, the row would toggle
   // a setting that can never take effect.
-  if (setting.valuePtr == &CrossPointSettings::libraryCoverView && !UITheme::supportsCoverGrid()) return false;
+  if ((setting.valuePtr == &CrossPointSettings::libraryCoverView ||
+       setting.valuePtr == &CrossPointSettings::homeShowCover) &&
+      !UITheme::supportsCoverGrid()) {
+    return false;
+  }
   // Merged into the Text Settings screen.
   if (setting.category == StrId::STR_CAT_READER && setting.inTextSettings) return false;
   if (setting.valuePtr == &CrossPointSettings::pwrBtnFootnoteBack &&

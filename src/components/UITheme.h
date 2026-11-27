@@ -42,6 +42,8 @@ class UITheme {
   // PSRAM holds the cover caches. Without it, Home shows the current book as
   // text and the Library has no cover view.
   static bool supportsCoverGrid();
+  // Home draws the current book as a cover: PSRAM present and the user left it on.
+  static bool homeShowsCover() { return supportsCoverGrid() && SETTINGS.homeShowCover != 0; }
   static std::string getCoverThumbPath(std::string coverBmpPath, int coverHeight);
   static UIIcon getFileIcon(const std::string& filename);
   static int getStatusBarHeight();
