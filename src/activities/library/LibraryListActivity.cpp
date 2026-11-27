@@ -1466,7 +1466,26 @@ bool LibraryListActivity::coverLabelFor(const int entry, std::string& out) {
   return true;
 }
 
+// "38%" for a book that is started and not finished, shown when it has no status tag.
+// Finished books carry the Read tag, and an unopened book has no percentage.
+const char* LibraryListActivity::coverProgressFor(const int entry) {
+  if (entry < 0 || entry >= listCount()) return nullptr;
+  std::string path;
+  if (!coverPathFor(entry, path)) return nullptr;
+  const int percent = cachedProgress(path);
+  if (percent <= 0 || percent >= 100) return nullptr;
+  // Read at once by the grid's tag painter, so one buffer is enough.
+  static char label[8];
+  snprintf(label, sizeof(label), "%d%%", percent);
+  return label;
+}
+
 const char* LibraryListActivity::coverTagFor(const int entry) {
+  const char* status = coverStatusFor(entry);
+  return status != nullptr ? status : coverProgressFor(entry);
+}
+
+const char* LibraryListActivity::coverStatusFor(const int entry) {
   if (!anyShelfStatus() || entry < 0 || entry >= listCount()) return nullptr;
   if (entry < pinnedCount()) {
     const RecentBook* book = storeBook(entry);
@@ -1521,6 +1540,8 @@ void LibraryListActivity::buildScreen(UiScreen& screen) {
     // The grid owns its covers and viewport; it returns the top entry so the
     // list nav stays in step for the readout and for page jumps.
     coverGrid.setSource(this);
+    // One progress read per cell on the page; results are cached for later draws.
+    progressLoadsLeft = LibraryCoverGrid::COLUMNS * LibraryCoverGrid::ROWS;
     auto& nav = activeNav();
     const auto body = screen.body();
     nav.top = coverGrid.build(screen, body, selectedEntry(), ACTION_ROW);

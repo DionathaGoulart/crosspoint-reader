@@ -166,6 +166,8 @@ class LibraryListActivity final : public UiTabListActivity, private LibraryCover
   bool coverPathFor(int entry, std::string& out) override;
   bool coverLabelFor(int entry, std::string& out) override;
   const char* coverTagFor(int entry) override;
+  const char* coverStatusFor(int entry);
+  const char* coverProgressFor(int entry);
   // Materializes ListItems and their strings for the visible window only.
   void buildRows(UiScreen& screen);
   static void formatInitialHeading(uint32_t initial, std::string& out);
