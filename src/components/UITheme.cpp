@@ -11,7 +11,10 @@
 #include "MappedInputManager.h"
 #include "RecentBooksStore.h"
 #include "components/themes/BaseTheme.h"
+#include "components/themes/SkinMetrics.h"
 #include "components/themes/good/GoodTheme.h"
+
+static_assert(SkinMetrics::kCount == CrossPointSettings::UI_THEME_COUNT, "SkinMetrics::kTable must match UI_THEME");
 
 UITheme UITheme::instance;
 
@@ -22,9 +25,12 @@ bool UITheme::supportsCoverGrid() { return HalMemory::getPsramHeap().totalBytes 
 const ThemeMetrics& UITheme::getMetrics() const {
   // hasTouch() can flip once touch init completes after static construction, so the
   // cached copy is refreshed when the flag differs instead of copying the struct per call.
+  // The cache also keys on the theme setting, so a change in Settings takes effect on the next call.
   const bool touch = gpio.hasTouch();
-  if (!metricsValid || touch != metricsForTouch) {
-    adjustedMetrics = GoodMetrics::values;
+  const uint8_t skin = SETTINGS.uiTheme;
+  if (!metricsValid || touch != metricsForTouch || skin != metricsSkin) {
+    adjustedMetrics = SkinMetrics::forTheme(skin);
+    metricsSkin = skin;
     if (touch) {
       adjustedMetrics.buttonHintsHeight = 0;
     }
