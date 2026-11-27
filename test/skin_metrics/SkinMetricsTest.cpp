@@ -27,16 +27,17 @@ TEST(SkinMetrics, OutOfRangeFallsBackToGood) {
   EXPECT_EQ(&SkinMetrics::forTheme(255), &SkinMetrics::kTable[0]);
 }
 
-TEST(SkinMetrics, SafeAreaFieldsMatchWhatGoodThemeDraws) {
-  for (uint8_t i = 0; i < SkinMetrics::kCount; i++) {
-    const ThemeMetrics& m = SkinMetrics::forTheme(i);
-    EXPECT_EQ(m.buttonHintsHeight, GoodMetrics::values.buttonHintsHeight) << "skin " << int(i);
-    EXPECT_EQ(m.sideButtonHintsWidth, GoodMetrics::values.sideButtonHintsWidth) << "skin " << int(i);
-    EXPECT_EQ(m.contentSidePadding, GoodMetrics::values.contentSidePadding) << "skin " << int(i);
-  }
-}
-
 TEST(SkinMetrics, DefaultSkinHasATable) {
   EXPECT_LT(kHandheldOs, SkinMetrics::kCount);
   EXPECT_NE(&SkinMetrics::forTheme(kHandheldOs), &SkinMetrics::kTable[0]);
+}
+
+TEST(SkinMetrics, ChromeStylesPerSkin) {
+  constexpr HintStyle hints[] = {HintStyle::Boxes, HintStyle::Boxes, HintStyle::InvertedBar,
+                                 HintStyle::Boxes, HintStyle::Ruled, HintStyle::Ruled};
+  constexpr bool inverted[] = {false, true, true, true, false, false};
+  for (uint8_t i = 0; i < SkinMetrics::kCount; i++) {
+    EXPECT_EQ(SkinMetrics::forTheme(i).buttonHintsStyle, hints[i]) << "skin " << int(i);
+    EXPECT_EQ(SkinMetrics::forTheme(i).headerInverted, inverted[i]) << "skin " << int(i);
+  }
 }

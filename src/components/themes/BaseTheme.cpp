@@ -187,7 +187,7 @@ void BaseTheme::drawProgressBar(const GfxRenderer& renderer, Rect rect, const si
 
 // Centre hint labels by text height, wrapping to at most two lines.
 void BaseTheme::drawHintLabel(const GfxRenderer& renderer, const int fontId, const char* label, const int x,
-                              const int boxWidth, const int boxTop, const int boxHeight) {
+                              const int boxWidth, const int boxTop, const int boxHeight, const bool black) {
   constexpr int textPadding = 4;  // keeps a wrapped label off the button's border
   const int maxTextWidth = boxWidth - (textPadding * 2);
 
@@ -195,7 +195,7 @@ void BaseTheme::drawHintLabel(const GfxRenderer& renderer, const int fontId, con
   const int textWidth = renderer.getTextWidth(fontId, label);
   if (textWidth <= maxTextWidth) {
     const int textY = boxTop + std::max(1, (boxHeight - textHeight) / 2);
-    renderer.drawText(fontId, x + (boxWidth - 1 - textWidth) / 2, textY, label);
+    renderer.drawText(fontId, x + (boxWidth - 1 - textWidth) / 2, textY, label, black);
     return;
   }
 
@@ -209,7 +209,7 @@ void BaseTheme::drawHintLabel(const GfxRenderer& renderer, const int fontId, con
   int lineY = boxTop + std::max(1, (boxHeight - block) / 2);
   for (const auto& line : lines) {
     const int lineWidth = renderer.getTextWidth(fontId, line.c_str());
-    renderer.drawText(fontId, x + (boxWidth - 1 - lineWidth) / 2, lineY, line.c_str());
+    renderer.drawText(fontId, x + (boxWidth - 1 - lineWidth) / 2, lineY, line.c_str(), black);
     lineY += step;
   }
 }
@@ -495,6 +495,15 @@ void BaseTheme::drawHeader(const GfxRenderer& renderer, Rect rect, const char* t
   if (title != nullptr && props.styles.normal.border.kind == fui::PaintKind::None && tokens.headerUnderline > 0) {
     props.styles.normal.border = fui::Paint::solid(fui::Color::Black);
     props.styles.normal.borderWidth = tokens.headerUnderline;
+  }
+  if (UITheme::getInstance().getMetrics().headerInverted) {
+    // White on black: the band, title, status text, battery glyph and back button all flip.
+    props.styles.normal.background = fui::Paint::solid(fui::Color::Black);
+    props.titleText.color = fui::Color::White;
+    props.subtitleText.color = fui::Color::White;
+    props.status.battery.color = fui::Color::White;
+    props.status.battery.text.color = fui::Color::White;
+    props.leadingStyles = fui::plainStyles(fui::Paint::solid(fui::Color::White));
   }
   fui::header(ui.frame, band, props);
 }

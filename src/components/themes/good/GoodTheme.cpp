@@ -19,6 +19,7 @@ namespace {
 constexpr int hPaddingInSelection = 8;
 constexpr int cornerRadius = 0;
 constexpr int topHintButtonY = 345;
+constexpr int ruleThickness = 3;
 }  // namespace
 
 void GoodTheme::fillBatteryIcon(const GfxRenderer& renderer, Rect rect, uint16_t percentage) const {
@@ -42,21 +43,22 @@ void GoodTheme::fillBatteryIcon(const GfxRenderer& renderer, Rect rect, uint16_t
 }
 
 void GoodTheme::drawSubHeader(const GfxRenderer& renderer, Rect rect, const char* label, const char* rightLabel) const {
-  const int contentWidth = std::max(0, rect.width - GoodMetrics::values.contentSidePadding * 2);
+  const int sidePadding = UITheme::getInstance().getMetrics().contentSidePadding;
+  const int contentWidth = std::max(0, rect.width - sidePadding * 2);
 
   int labelWidth = contentWidth;
   if (rightLabel) {
     auto truncatedRightLabel = renderer.truncatedText(SMALL_FONT_ID, rightLabel, contentWidth, EpdFontFamily::REGULAR);
     const int rightLabelWidth = renderer.getTextWidth(SMALL_FONT_ID, truncatedRightLabel.c_str());
-    renderer.drawText(SMALL_FONT_ID, rect.x + rect.width - GoodMetrics::values.contentSidePadding - rightLabelWidth,
-                      rect.y + 7, truncatedRightLabel.c_str());
+    renderer.drawText(SMALL_FONT_ID, rect.x + rect.width - sidePadding - rightLabelWidth, rect.y + 7,
+                      truncatedRightLabel.c_str());
     labelWidth = std::max(0, contentWidth - rightLabelWidth - hPaddingInSelection);
   }
 
   if (labelWidth > 0) {
     auto truncatedLabel = renderer.truncatedText(UI_10_FONT_ID, label, labelWidth, EpdFontFamily::REGULAR);
-    renderer.drawText(UI_10_FONT_ID, rect.x + GoodMetrics::values.contentSidePadding, rect.y + 6,
-                      truncatedLabel.c_str(), true, EpdFontFamily::REGULAR);
+    renderer.drawText(UI_10_FONT_ID, rect.x + sidePadding, rect.y + 6, truncatedLabel.c_str(), true,
+                      EpdFontFamily::REGULAR);
   }
 
   renderer.drawLine(rect.x, rect.y + rect.height - 1, rect.x + rect.width - 1, rect.y + rect.height - 1, true);
@@ -74,8 +76,11 @@ void GoodTheme::drawButtonHints(GfxRenderer& renderer, const char* btn1, const c
   const int pageHeight = renderer.getScreenHeight();
   constexpr int buttonWidth = 80;
   constexpr int smallButtonHeight = 15;
-  constexpr int buttonHeight = GoodMetrics::values.buttonHintsHeight;
-  constexpr int buttonY = GoodMetrics::values.buttonHintsHeight;  // Distance from bottom
+  const HintStyle hintStyle = UITheme::getInstance().getMetrics().buttonHintsStyle;
+  const bool ruled = hintStyle == HintStyle::Ruled;
+  // Same metric getScreenSafeArea() reserves, so the hints always fill the reserved strip.
+  const int buttonHeight = UITheme::getInstance().getMetrics().buttonHintsHeight;
+  const int buttonY = buttonHeight;  // Distance from bottom
   // Keyed to the portrait panel width: the 528-wide X3 gets more spacing than
   // the 480-wide boards (X4, X4 Pro, and the other 800x480 panels).
   constexpr int narrowButtonPositions[] = {58, 146, 254, 342};
@@ -83,6 +88,40 @@ void GoodTheme::drawButtonHints(GfxRenderer& renderer, const char* btn1, const c
   const int* buttonPositions = renderer.getScreenWidth() >= 528 ? wideButtonPositions : narrowButtonPositions;
   const char* labels[] = {btn1, btn2, btn3, btn4};
   const bool grayscale = renderer.getRenderMode() != GfxRenderer::BW && !renderer.grayPlanesAreAbsolute();
+
+  if (ruled) {
+    // Ruled strip: one top rule and bare labels over the same button slots.
+    // As in BaseTheme, gray planes get zero bits so the BW pass stays intact.
+    renderer.fillRect(0, pageHeight - buttonY, renderer.getScreenWidth(), buttonHeight, grayscale);
+    if (!grayscale) {
+      renderer.fillRect(0, pageHeight - buttonY, renderer.getScreenWidth(), ruleThickness, true);
+      for (int i = 0; i < 4; i++) {
+        if (labels[i] != nullptr && labels[i][0] != '\0') {
+          drawHintLabel(renderer, SMALL_FONT_ID, labels[i], buttonPositions[i], buttonWidth, pageHeight - buttonY,
+                        buttonHeight);
+        }
+      }
+    }
+    renderer.setOrientation(orig_orientation);
+    return;
+  }
+
+  if (hintStyle == HintStyle::InvertedBar) {
+    // Inverted bar: white "N label" keys on black. True clears gray bits in the gray pass.
+    renderer.fillRect(0, pageHeight - buttonY, renderer.getScreenWidth(), buttonHeight, true);
+    if (!grayscale) {
+      for (int i = 0; i < 4; i++) {
+        if (labels[i] != nullptr && labels[i][0] != '\0') {
+          char keyed[40];
+          snprintf(keyed, sizeof(keyed), "%d %s", i + 1, labels[i]);
+          drawHintLabel(renderer, SMALL_FONT_ID, keyed, buttonPositions[i], buttonWidth, pageHeight - buttonY,
+                        buttonHeight, false);
+        }
+      }
+    }
+    renderer.setOrientation(orig_orientation);
+    return;
+  }
 
   for (int i = 0; i < 4; i++) {
     const int x = buttonPositions[i];
@@ -113,8 +152,9 @@ void GoodTheme::drawSideButtonHints(const GfxRenderer& renderer, const char* top
   }
 
   const int screenWidth = renderer.getScreenWidth();
-  constexpr int buttonWidth = GoodMetrics::values.sideButtonHintsWidth;  // Width on screen (height when rotated)
-  constexpr int buttonHeight = 78;                                       // Height on screen (width when rotated)
+  const int buttonWidth =
+      UITheme::getInstance().getMetrics().sideButtonHintsWidth;  // Width on screen (height when rotated)
+  constexpr int buttonHeight = 78;                               // Height on screen (width when rotated)
   constexpr int buttonMargin = 0;
 
   if (gpio.hasEdgeSideButtons()) {

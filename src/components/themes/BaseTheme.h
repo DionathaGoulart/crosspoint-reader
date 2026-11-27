@@ -27,6 +27,13 @@ struct Rect {
   explicit Rect(int x = 0, int y = 0, int width = 0, int height = 0) : x(x), y(y), width(width), height(height) {}
 };
 
+// Front button hint look. Drawn by GoodTheme, the only theme that overrides drawButtonHints.
+enum class HintStyle : uint8_t {
+  Boxes,        // bordered box per button
+  Ruled,        // top rule, bare labels
+  InvertedBar,  // white on black bar, numbered keys
+};
+
 struct ThemeMetrics {
   int batteryWidth;
   int batteryHeight;
@@ -77,6 +84,9 @@ struct ThemeMetrics {
 
   int buttonHintsHeight;
   int sideButtonHintsWidth;
+  HintStyle buttonHintsStyle = HintStyle::Boxes;
+  // Header band drawn white on black.
+  bool headerInverted = false;
 
   int progressBarHeight;
   int progressBarMarginTop;
@@ -232,7 +242,7 @@ class BaseTheme {
   // Shared by every theme's drawButtonHints(): centres a hint label in its box,
   // wrapping to two lines rather than overflowing when it's too wide to fit.
   static void drawHintLabel(const GfxRenderer& renderer, int fontId, const char* label, int x, int boxWidth, int boxTop,
-                            int boxHeight);
+                            int boxHeight, bool black = true);
   virtual void drawSideButtonHints(const GfxRenderer& renderer, const char* topBtn, const char* bottomBtn) const;
   // Also draws the wall clock opposite the battery when the user enabled
   // SETTINGS.clockShowInHeader and an RTC is present. On touch boards a
