@@ -1869,6 +1869,7 @@ HalDisplay::RefreshMode GfxRenderer::applyPromotedRefresh(const HalDisplay::Refr
 }
 
 void GfxRenderer::displayBuffer(HalDisplay::RefreshMode refreshMode) const {
+  if (chromeHook && renderMode == BW) chromeHook(*this);
   auto elapsed = millis() - start_ms;
   LOG_DBG("GFX", "Time = %lu ms from clearScreen to displayBuffer", elapsed);
   refreshMode = applyPromotedRefresh(refreshMode);
@@ -1876,6 +1877,7 @@ void GfxRenderer::displayBuffer(HalDisplay::RefreshMode refreshMode) const {
 }
 
 void GfxRenderer::displayBufferAsync(HalDisplay::RefreshMode refreshMode) const {
+  if (chromeHook && renderMode == BW) chromeHook(*this);
   refreshMode = applyPromotedRefresh(refreshMode);
   // The async path has no turn-off-screen hook, which the sunlight fading fix
   // relies on; keep those users on the blocking path.
@@ -2760,4 +2762,5 @@ void GfxRenderer::getOrientedViewableTRBL(int* outTop, int* outRight, int* outBo
       *outLeft = vi.top;
       break;
   }
+  *outLeft += chromeInsetLeft;
 }

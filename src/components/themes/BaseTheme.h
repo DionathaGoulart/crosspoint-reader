@@ -88,6 +88,10 @@ struct ThemeMetrics {
   HintStyle buttonHintsStyle = HintStyle::Boxes;
   // Header band drawn white on black.
   bool headerInverted = false;
+  // Width of the left side bar on root screens, 0 = none.
+  int sideBarWidth = 0;
+  // Window frame drawn on the screen edge of every screen, 0 = none.
+  int frameThickness = 0;
 
   int progressBarHeight;
   int progressBarMarginTop;

@@ -77,4 +77,5 @@ class FileBrowserActivity final : public UiListActivity {
   void onEnter() override;
   void onExit() override;
   void render(RenderLock&& lock) override;
+  int sideBarSection() const override { return mode == Mode::Books ? 2 : -1; }
 };

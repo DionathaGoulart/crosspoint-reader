@@ -20,6 +20,7 @@
 #include "boot_sleep/SleepActivity.h"
 #include "browser/OpdsBookBrowserActivity.h"
 #include "components/HeaderBackTapTarget.h"
+#include "components/UITheme.h"
 #include "components/UiAppHelpers.h"
 #include "home/CrashActivity.h"
 #include "home/FileBrowserActivity.h"
@@ -47,6 +48,7 @@ ActivityManager::ActivityManager(GfxRenderer& renderer, MappedInputManager& mapp
 ActivityManager::~ActivityManager() { assert(false); /* should never be called */ }
 
 void ActivityManager::begin() {
+  renderer.setChromeHook(&UITheme::drawChrome);
 #if defined(configNUM_CORES) && configNUM_CORES > 1
   constexpr BaseType_t renderTaskCore = 1;
 #else
@@ -89,6 +91,7 @@ void ActivityManager::renderTaskLoop() {
       // The sleep screen forces normal polarity itself (SleepActivity).
       display.setInverted(SETTINGS.screenInverted != 0);
       const uint32_t renderingVisit = screenVisit;
+      UITheme::setActiveSideBar(renderer, currentActivity->sideBarSection());
       currentActivity->render(std::move(lock));
       paintedVisit.store(renderingVisit, std::memory_order_release);
     }

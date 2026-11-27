@@ -5,6 +5,7 @@
 #include <GfxRenderer.h>
 #include <HalGPIO.h>
 #include <HalMemory.h>
+#include <I18n.h>
 
 #include <algorithm>
 
@@ -13,6 +14,7 @@
 #include "components/themes/BaseTheme.h"
 #include "components/themes/SkinMetrics.h"
 #include "components/themes/good/GoodTheme.h"
+#include "fontIds.h"
 
 static_assert(SkinMetrics::kCount == CrossPointSettings::UI_THEME_COUNT, "SkinMetrics::kTable must match UI_THEME");
 
@@ -49,6 +51,58 @@ Rect UITheme::getContentArea(const GfxRenderer& renderer) {
   renderer.getOrientedViewableTRBL(&viTop, &viRight, &viBottom, &viLeft);
   return Rect{viLeft, viTop, renderer.getScreenWidth() - viLeft - viRight,
               renderer.getScreenHeight() - viTop - viBottom};
+}
+
+void UITheme::setActiveSideBar(GfxRenderer& renderer, const int section) {
+  const int width = instance.getMetrics().sideBarWidth;
+  const bool on = section >= 0 && width > 0;
+  sideBarSection = on ? section : -1;
+  renderer.setChromeInsetLeft(on ? width : 0);
+}
+
+void UITheme::drawChrome(const GfxRenderer& renderer) {
+  const int frame = instance.getMetrics().frameThickness;
+  if (frame > 0) {
+    int top, right, bottom, left;
+    renderer.getOrientedViewableTRBL(&top, &right, &bottom, &left);
+    // The frame hugs the panel edge; the side bar sits inside it, so use the bezel-only left.
+    const int x = left - renderer.getChromeInsetLeft();
+    const int w = renderer.getScreenWidth() - x - right;
+    const int h = renderer.getScreenHeight() - top - bottom;
+    renderer.fillRect(x, top, w, frame, true);
+    renderer.fillRect(x, top + h - frame, w, frame, true);
+    renderer.fillRect(x, top, frame, h, true);
+    renderer.fillRect(x + w - frame, top, frame, h, true);
+  }
+  drawSideBar(renderer);
+}
+
+void UITheme::drawSideBar(const GfxRenderer& renderer) {
+  const int width = renderer.getChromeInsetLeft();
+  if (sideBarSection < 0 || width <= 0) return;
+  const StrId labels[] = {StrId::STR_SIDEBAR_HOME, StrId::STR_SIDEBAR_BOOKS, StrId::STR_SIDEBAR_FILES,
+                          StrId::STR_SIDEBAR_SEND, StrId::STR_SIDEBAR_SETUP};
+  constexpr int count = sizeof(labels) / sizeof(labels[0]);
+  constexpr int rule = 2;
+
+  int top, right, bottom, left;
+  renderer.getOrientedViewableTRBL(&top, &right, &bottom, &left);
+  const int x = left - width;
+  const int height = renderer.getScreenHeight() - top - bottom;
+  const int cell = height / count;
+  const int lineHeight = renderer.getLineHeight(SMALL_FONT_ID);
+
+  renderer.fillRect(x, top, width - rule, height, false);
+  renderer.fillRect(x + width - rule, top, rule, height, true);
+  for (int i = 0; i < count; i++) {
+    const bool selected = i == sideBarSection;
+    const int y = top + i * cell;
+    if (selected) renderer.fillRect(x, y, width - rule, cell, true);
+    const auto text = renderer.truncatedText(SMALL_FONT_ID, I18N.get(labels[i]), width - rule - 4);
+    const int textWidth = renderer.getTextWidth(SMALL_FONT_ID, text.c_str());
+    renderer.drawText(SMALL_FONT_ID, x + (width - rule - textWidth) / 2, y + (cell - lineHeight) / 2, text.c_str(),
+                      !selected);
+  }
 }
 
 // Content area excluding the button hints.

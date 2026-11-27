@@ -26,6 +26,12 @@ class UITheme {
   // their content bounds from so every screen clears the bezel identically.
   // Zero-inset on rectangular panels, so no visible change there.
   static Rect getContentArea(const GfxRenderer& renderer);
+  // Called by the render task before each screen: reserves the side bar's width on the
+  // renderer for a root screen (section >= 0) when the skin has one, and clears it otherwise.
+  static void setActiveSideBar(GfxRenderer& renderer, int section);
+  // Chrome hook: paints the side bar over the finished frame, just before it is shown.
+  static void drawChrome(const GfxRenderer& renderer);
+  static void drawSideBar(const GfxRenderer& renderer);
   Rect getScreenSafeArea(const GfxRenderer& renderer, bool hasFrontButtonHints = false,
                          bool hasSideButtonHints = false);
   // Header rect for GUI.drawHeader() on a screen laid out in getScreenSafeArea():
@@ -57,6 +63,7 @@ class UITheme {
   mutable bool metricsValid = false;
   mutable bool metricsForTouch = false;
   mutable uint8_t metricsSkin = 0;
+  static inline int sideBarSection = -1;
 };
 
 // Helper macro to access current theme

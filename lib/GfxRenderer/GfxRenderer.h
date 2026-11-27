@@ -53,6 +53,8 @@ class GfxRenderer {
   mutable bool absoluteGrayPlanes = false;
   bool ditherImagesInBw = false;
   Orientation orientation;
+  int chromeInsetLeft = 0;
+  void (*chromeHook)(const GfxRenderer&) = nullptr;
   bool fadingFix;
   uint8_t* frameBuffer = nullptr;
   uint32_t frameBufferLoans = 0;
@@ -208,6 +210,14 @@ class GfxRenderer {
   void ensureSdCardFontReady(int fontId, const char* const* segments, const size_t* segmentLens, size_t segmentCount,
                              bool includeSpace, bool includeHyphen, uint8_t styleMask = 0x0F,
                              bool includeSmallCaps = false) const;
+
+  // Extra inset on the logical left edge, for UI chrome such as a side bar. Added to the
+  // oriented viewable insets, so every layout that reads them clears the chrome.
+  void setChromeInsetLeft(const int px) { chromeInsetLeft = px < 0 ? 0 : px; }
+  int getChromeInsetLeft() const { return chromeInsetLeft; }
+  // Called just before a black-and-white frame is sent to the panel, to draw chrome on top.
+  using ChromeHook = void (*)(const GfxRenderer&);
+  void setChromeHook(const ChromeHook hook) { chromeHook = hook; }
 
   // Orientation control (affects logical width/height and coordinate transforms)
   void setOrientation(const Orientation o) { orientation = o; }

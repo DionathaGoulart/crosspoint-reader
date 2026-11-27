@@ -41,3 +41,15 @@ TEST(SkinMetrics, ChromeStylesPerSkin) {
     EXPECT_EQ(SkinMetrics::forTheme(i).headerInverted, inverted[i]) << "skin " << int(i);
   }
 }
+
+TEST(SkinMetrics, OnlyHandheldHasASideBar) {
+  for (uint8_t i = 0; i < SkinMetrics::kCount; i++) {
+    EXPECT_EQ(SkinMetrics::forTheme(i).sideBarWidth, i == kHandheldOs ? 56 : 0) << "skin " << int(i);
+  }
+}
+
+TEST(SkinMetrics, OnlyMonoMacHasAFrame) {
+  for (uint8_t i = 0; i < SkinMetrics::kCount; i++) {
+    EXPECT_EQ(SkinMetrics::forTheme(i).frameThickness, i == kMonoMac ? 2 : 0) << "skin " << int(i);
+  }
+}
