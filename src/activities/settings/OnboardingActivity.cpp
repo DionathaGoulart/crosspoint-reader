@@ -36,6 +36,8 @@ StepKeys keysFor(const onboarding::Step step) {
       return {{"orientation", "sideButtonLayout"}, 2};
     case onboarding::Step::Sleep:
       return {{"sleepScreen"}, 1};
+    case onboarding::Step::Summary:
+      return {{"uiSkin", "orientation", "sleepScreen"}, 3};
     case onboarding::Step::Theme:
       // The row changes the theme at once, so the pages after it already use the choice.
       return {{"uiSkin"}, 1};
@@ -128,6 +130,9 @@ void OnboardingActivity::rebuildRows() {
       break;
     case onboarding::Step::Goals:
       rows_.push_back({Kind::Goals});
+      break;
+    case onboarding::Step::Summary:
+      rows_.push_back({Kind::Language});
       break;
     case onboarding::Step::Theme:
     case onboarding::Step::Sleep:

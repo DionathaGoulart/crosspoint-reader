@@ -7,13 +7,14 @@ using onboarding::Step;
 
 TEST(OnboardingPlan, FullWalksEveryPageInOrder) {
   Step steps[onboarding::MAX_STEPS];
-  ASSERT_EQ(onboarding::stepsFor(Mode::Full, steps), 6u);
+  ASSERT_EQ(onboarding::stepsFor(Mode::Full, steps), 7u);
   EXPECT_EQ(steps[0], Step::Welcome);
   EXPECT_EQ(steps[1], Step::Theme);
   EXPECT_EQ(steps[2], Step::Reading);
   EXPECT_EQ(steps[3], Step::Controls);
   EXPECT_EQ(steps[4], Step::Sleep);
   EXPECT_EQ(steps[5], Step::Goals);
+  EXPECT_EQ(steps[6], Step::Summary);
 }
 
 TEST(OnboardingPlan, NewProfileShowsOnlyWhatBelongsToThatProfile) {
