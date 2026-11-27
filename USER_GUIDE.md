@@ -99,13 +99,15 @@ To reboot the device (for example after a firmware update or if it's frozen), pr
 
 ### First Launch
 
-Upon turning the device on for the first time, the **Setup guide** opens before the **[Home](#31-home-screen)** screen. It has five pages, and every choice is saved as soon as you make it:
+Upon turning the device on for the first time, the **Setup guide** opens before the **[Home](#31-home-screen)** screen. It has seven pages, and every choice is saved as soon as you make it:
 
 1. **Welcome** - the language and the name of your profile.
-2. **Reading** - font, size, spacing and margin, with a preview (the same screen as **Settings → Reader → Text Settings**).
-3. **Controls** - reading orientation, side button layout and, on devices with front buttons, **Remap Front Buttons**.
-4. **Sleep** - the sleep screen.
-5. **Goals** - your reading goals.
+2. **Theme** - the look of the menus. The change applies at once, so the next pages already use it.
+3. **Reading** - font, size, spacing and margin, with a preview (the same screen as **Settings → Reader → Text Settings**).
+4. **Controls** - reading orientation, side button layout and, on devices with front buttons, **Remap Front Buttons**.
+5. **Sleep** - the sleep screen.
+6. **Goals** - your reading goals.
+7. **Summary** - the language, theme, orientation, side button layout and sleep screen again, to change before you finish.
 
 Press **Next** to move on; the last page shows **Done**. **Back** returns to the previous page. On the first page the button reads **Skip** and leaves the guide. Leaving the guide, by **Skip** or **Done**, means it does not open again. If you turn the device off before then, it opens again at the next start.
 
@@ -264,7 +266,7 @@ Settings are grouped into **System**, **Display**, **Reader**, **Controls**, **L
 - **Theme**: The look of menus, lists, headers and button hints. The device-wide choice is saved and applies to every profile:
   
   - "Good" - The original GoodTheme
-  - "Pixel Quest", "Terminal DOS", "Arcade HUD", "Handheld OS" (default), "Mono Mac" - Retro skins that change row heights, selection style, header and button hints. Terminal DOS, Pixel Quest and Arcade HUD draw the header white on black.
+  - "Pixel Quest", "Terminal DOS", "Arcade HUD", "Handheld OS" (default), "Mono Mac" - Retro skins that change row heights, selection style, header and button hints. Handheld OS shows a side bar with the current section on the main screens in portrait. Mono Mac draws a thin frame around those screens. Arcade HUD uses rounded button hints. Terminal DOS, Pixel Quest and Arcade HUD draw the header white on black.
 
 - **Home: Reading Goals**: Show your reading goals above the current book on the Home screen (default on).
 
@@ -418,7 +420,7 @@ Side buttons, and Taps and gestures where supported by the device. See the
   - Plugins with web settings appear on the **Plugins** page of the web UI while **File Transfer** is running. Its link is hidden while plugins are disabled.
   - Plugin Hub is optional. Users who prefer manual installation can download it directly from [crosspoint-plugin-hub releases](https://github.com/crosspoint-reader/crosspoint-plugin-hub/releases) and copy/extract the `pluginhub` folder so it ends up at `/.crosspoint/plugins/pluginhub/`, `/plugins/pluginhub/`, or `/.plugins/pluginhub/`. Once installed, Plugin Hub appears as a normal entry under **Home → Plugins**.
 
-- **Setup guide**: Opens the five-page guide described under [First Launch](#first-launch) again.
+- **Setup guide**: Opens the seven-page guide described under [First Launch](#first-launch) again.
 
 - **Language**: Set the UI language. CrossPoint supports 32 languages: English, Spanish, French, German, Czech, Brazilian Portuguese, European Portuguese, Russian, Swedish, Romanian, Catalan, Ukrainian, Belarusian, Italian, Polish, Finnish, Danish, Dutch, Turkish, Kazakh, Hungarian, Lithuanian, Slovenian, Valencian, Hebrew, Arabic, Slovak, Bosnian, Vietnamese, Norwegian Bokmål, Indonesian, and Orangutan.
 
