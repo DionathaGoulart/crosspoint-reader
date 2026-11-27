@@ -35,7 +35,7 @@
 // indexed book so an allocation failure remains recoverable on the C3.
 class LibraryListActivity final : public UiTabListActivity, private LibraryCoverGrid::Source {
  public:
-  int sideBarSection() const override { return 1; }
+  SideBarSection sideBarSection() const override { return SideBarSection::Books; }
   LibraryListActivity(GfxRenderer& renderer, MappedInputManager& mappedInput);
 
   void onEnter() override;

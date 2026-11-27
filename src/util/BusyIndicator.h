@@ -29,7 +29,10 @@ class BusyIndicator {
 
   void draw() {
     if (count > 0) {
-      snprintf(text, sizeof(text), "%s (%u)", message, static_cast<unsigned>(count));
+      // The popup appends its own animated dots, so the message goes in without its trailing ones.
+      int length = static_cast<int>(strlen(message));
+      while (length > 0 && message[length - 1] == '.') --length;
+      snprintf(text, sizeof(text), "%.*s (%u)", length, message, static_cast<unsigned>(count));
       GUI.drawBusyPopup(renderer, text, step++);
     } else {
       GUI.drawBusyPopup(renderer, message, step++);

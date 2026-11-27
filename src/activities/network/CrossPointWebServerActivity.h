@@ -74,7 +74,7 @@ class CrossPointWebServerActivity final : public Activity {
   void onEnter() override;
   void onExit() override;
   void loop() override;
-  int sideBarSection() const override { return 3; }
+  SideBarSection sideBarSection() const override { return SideBarSection::Send; }
   void render(RenderLock&&) override;
   bool skipLoopDelay() override { return webServer && webServer->isRunning(); }
   bool preventAutoSleep() override { return webServer && webServer->isRunning(); }

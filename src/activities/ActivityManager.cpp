@@ -198,6 +198,7 @@ void ActivityManager::loop() {
       } else {
         currentActivity = std::move(stackActivities.back());
         stackActivities.pop_back();
+        UITheme::setActiveSideBar(renderer, currentActivity->sideBarSection());
         LOG_DBG("ACT", "Popped from activity stack, new size = %zu", stackActivities.size());
         // Handle result if necessary
         if (currentActivity->resultHandler) {
@@ -242,6 +243,8 @@ void ActivityManager::loop() {
       ++screenVisit;
       pendingAction = PendingAction::None;
       currentActivity = std::move(pendingActivity);
+      // Before onEnter: layout and popups there already see the new screen's chrome.
+      UITheme::setActiveSideBar(renderer, currentActivity->sideBarSection());
 
       lock.unlock();  // onEnter may acquire its own lock
       currentActivity->onEnter();
@@ -282,6 +285,7 @@ void ActivityManager::replaceActivity(std::unique_ptr<Activity>&& newActivity) {
   } else {
     // No current activity, safe to launch immediately
     currentActivity = std::move(newActivity);
+    UITheme::setActiveSideBar(renderer, currentActivity->sideBarSection());
     currentActivity->onEnter();
   }
 }

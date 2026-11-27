@@ -53,15 +53,19 @@ Rect UITheme::getContentArea(const GfxRenderer& renderer) {
               renderer.getScreenHeight() - viTop - viBottom};
 }
 
-void UITheme::setActiveSideBar(GfxRenderer& renderer, const int section) {
+void UITheme::setActiveSideBar(GfxRenderer& renderer, const SideBarSection section) {
+  rootSection = section;
   const int width = instance.getMetrics().sideBarWidth;
-  const bool on = section >= 0 && width > 0;
-  sideBarSection = on ? section : -1;
-  renderer.setChromeInsetLeft(on ? width : 0);
+  // Landscape keeps no bar: the front-button hints sit on the logical left edge there.
+  const auto orientation = renderer.getOrientation();
+  const bool portrait =
+      orientation == GfxRenderer::Orientation::Portrait || orientation == GfxRenderer::Orientation::PortraitInverted;
+  renderer.setChromeInsetLeft(section != SideBarSection::None && width > 0 && portrait ? width : 0);
 }
 
 void UITheme::drawChrome(const GfxRenderer& renderer) {
-  const int frame = instance.getMetrics().frameThickness;
+  // The frame frames root screens only: not the reader pages or the sleep screen.
+  const int frame = rootSection != SideBarSection::None ? instance.getMetrics().frameThickness : 0;
   if (frame > 0) {
     int top, right, bottom, left;
     renderer.getOrientedViewableTRBL(&top, &right, &bottom, &left);
@@ -79,10 +83,11 @@ void UITheme::drawChrome(const GfxRenderer& renderer) {
 
 void UITheme::drawSideBar(const GfxRenderer& renderer) {
   const int width = renderer.getChromeInsetLeft();
-  if (sideBarSection < 0 || width <= 0) return;
+  if (rootSection == SideBarSection::None || width <= 0) return;
   const StrId labels[] = {StrId::STR_SIDEBAR_HOME, StrId::STR_SIDEBAR_BOOKS, StrId::STR_SIDEBAR_FILES,
                           StrId::STR_SIDEBAR_SEND, StrId::STR_SIDEBAR_SETUP};
   constexpr int count = sizeof(labels) / sizeof(labels[0]);
+  static_assert(count == static_cast<int>(SideBarSection::Count), "one label per SideBarSection");
   constexpr int rule = 2;
 
   int top, right, bottom, left;
@@ -95,7 +100,7 @@ void UITheme::drawSideBar(const GfxRenderer& renderer) {
   renderer.fillRect(x, top, width - rule, height, false);
   renderer.fillRect(x + width - rule, top, rule, height, true);
   for (int i = 0; i < count; i++) {
-    const bool selected = i == sideBarSection;
+    const bool selected = i == static_cast<int>(rootSection);
     const int y = top + i * cell;
     if (selected) renderer.fillRect(x, y, width - rule, cell, true);
     const auto text = renderer.truncatedText(SMALL_FONT_ID, I18N.get(labels[i]), width - rule - 4);

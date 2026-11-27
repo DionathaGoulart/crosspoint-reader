@@ -11,6 +11,7 @@
 #include "GfxRenderer.h"
 #include "MappedInputManager.h"
 #include "RenderLock.h"
+#include "components/SideBarSection.h"
 #include "util/ScreenshotInfo.h"
 
 class Activity {
@@ -54,7 +55,7 @@ class Activity {
   virtual bool handleForcedRefresh() { return false; }
   virtual bool isHomeActivity() const { return false; }
   // Position of this root screen in the theme's side bar, or -1 when it shows none.
-  virtual int sideBarSection() const { return -1; }
+  virtual SideBarSection sideBarSection() const { return SideBarSection::None; }
   virtual bool handleHomeGesture() { return false; }
   virtual ScreenshotInfo getScreenshotInfo() const { return {}; }
 

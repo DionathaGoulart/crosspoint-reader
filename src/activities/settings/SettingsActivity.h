@@ -233,5 +233,5 @@ class SettingsActivity final : public UiListActivity {
                    ControlsGroup controlsGroup = ControlsGroup::Root, std::string query = {});
   void onEnter() override;
   void render(RenderLock&& lock) override;
-  int sideBarSection() const override { return 4; }
+  SideBarSection sideBarSection() const override { return SideBarSection::Setup; }
 };

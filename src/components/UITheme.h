@@ -5,6 +5,7 @@
 #include <functional>
 
 #include "CrossPointSettings.h"
+#include "components/SideBarSection.h"
 #include "components/themes/BaseTheme.h"
 #include "components/themes/good/GoodTheme.h"
 
@@ -28,7 +29,7 @@ class UITheme {
   static Rect getContentArea(const GfxRenderer& renderer);
   // Called by the render task before each screen: reserves the side bar's width on the
   // renderer for a root screen (section >= 0) when the skin has one, and clears it otherwise.
-  static void setActiveSideBar(GfxRenderer& renderer, int section);
+  static void setActiveSideBar(GfxRenderer& renderer, SideBarSection section);
   // Chrome hook: paints the side bar over the finished frame, just before it is shown.
   static void drawChrome(const GfxRenderer& renderer);
   static void drawSideBar(const GfxRenderer& renderer);
@@ -63,7 +64,8 @@ class UITheme {
   mutable bool metricsValid = false;
   mutable bool metricsForTouch = false;
   mutable uint8_t metricsSkin = 0;
-  static inline int sideBarSection = -1;
+  // The root screen on show, or None. Drives the side bar (portrait only) and the window frame.
+  static inline SideBarSection rootSection = SideBarSection::None;
 };
 
 // Helper macro to access current theme
