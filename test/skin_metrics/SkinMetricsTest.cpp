@@ -34,7 +34,7 @@ TEST(SkinMetrics, DefaultSkinHasATable) {
 
 TEST(SkinMetrics, ChromeStylesPerSkin) {
   constexpr HintStyle hints[] = {HintStyle::Boxes, HintStyle::Boxes, HintStyle::InvertedBar,
-                                 HintStyle::Boxes, HintStyle::Ruled, HintStyle::Ruled};
+                                 HintStyle::Pill,  HintStyle::Ruled, HintStyle::Ruled};
   constexpr bool inverted[] = {false, true, true, true, false, false};
   for (uint8_t i = 0; i < SkinMetrics::kCount; i++) {
     EXPECT_EQ(SkinMetrics::forTheme(i).buttonHintsStyle, hints[i]) << "skin " << int(i);

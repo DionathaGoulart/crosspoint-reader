@@ -32,6 +32,7 @@ enum class HintStyle : uint8_t {
   Boxes,        // bordered box per button
   Ruled,        // top rule, bare labels
   InvertedBar,  // white on black bar, numbered keys
+  Pill,         // boxes with fully rounded ends
 };
 
 struct ThemeMetrics {

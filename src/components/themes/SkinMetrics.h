@@ -50,7 +50,7 @@ inline constexpr ThemeMetrics kTable[] = {
     GoodMetrics::values,
     derive({72, 4, 44, 64, 4, 16, 3, 3, 6, HintStyle::Boxes, true}),        // Pixel Quest: arrow cursor, hard shadow
     derive({56, 0, 40, 60, 0, 12, 0, 4, 0, HintStyle::InvertedBar, true}),  // Terminal DOS: flat, inverted rows
-    derive({76, 4, 48, 68, 6, 16, 0, 4, 6, HintStyle::Boxes, true}),        // Arcade HUD: heavy borders, shadow
+    derive({76, 4, 48, 68, 6, 16, 0, 4, 6, HintStyle::Pill, true}),         // Arcade HUD: heavy borders, shadow
     derive({64, 3, 44, 64, 0, 12, 0, 3, 0, HintStyle::Ruled, false}),       // Handheld OS: flat, inverted rows
     derive({56, 2, 40, 60, 0, 14, 0, 2, 5, HintStyle::Ruled, false}),       // Mono Mac: thin rules, small shadow
 };

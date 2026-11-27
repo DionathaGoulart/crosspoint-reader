@@ -78,6 +78,9 @@ void GoodTheme::drawButtonHints(GfxRenderer& renderer, const char* btn1, const c
   constexpr int smallButtonHeight = 15;
   const HintStyle hintStyle = UITheme::getInstance().getMetrics().buttonHintsStyle;
   const bool ruled = hintStyle == HintStyle::Ruled;
+  const int boxRadius =
+      hintStyle == HintStyle::Pill ? UITheme::getInstance().getMetrics().buttonHintsHeight / 2 : cornerRadius;
+  const int smallRadius = std::min(boxRadius, smallButtonHeight / 2);
   // Same metric getScreenSafeArea() reserves, so the hints always fill the reserved strip.
   const int buttonHeight = UITheme::getInstance().getMetrics().buttonHintsHeight;
   const int buttonY = buttonHeight;  // Distance from bottom
@@ -127,18 +130,18 @@ void GoodTheme::drawButtonHints(GfxRenderer& renderer, const char* btn1, const c
     const int x = buttonPositions[i];
     if (labels[i] != nullptr && labels[i][0] != '\0') {
       // Draw the filled background and border for a FULL-sized button
-      renderer.fillRoundedRect(x, pageHeight - buttonY, buttonWidth, buttonHeight, cornerRadius,
+      renderer.fillRoundedRect(x, pageHeight - buttonY, buttonWidth, buttonHeight, boxRadius,
                                grayscale ? Color::Black : Color::White);
       if (grayscale) continue;
-      renderer.drawRoundedRect(x, pageHeight - buttonY, buttonWidth, buttonHeight, 1, cornerRadius, true, true, false,
+      renderer.drawRoundedRect(x, pageHeight - buttonY, buttonWidth, buttonHeight, 1, boxRadius, true, true, false,
                                false, true);
       drawHintLabel(renderer, SMALL_FONT_ID, labels[i], x, buttonWidth, pageHeight - buttonY, buttonHeight);
     } else {
       // Draw the filled background and border for a SMALL-sized button
-      renderer.fillRoundedRect(x, pageHeight - smallButtonHeight, buttonWidth, smallButtonHeight, cornerRadius,
+      renderer.fillRoundedRect(x, pageHeight - smallButtonHeight, buttonWidth, smallButtonHeight, smallRadius,
                                grayscale ? Color::Black : Color::White);
       if (grayscale) continue;
-      renderer.drawRoundedRect(x, pageHeight - smallButtonHeight, buttonWidth, smallButtonHeight, 1, cornerRadius, true,
+      renderer.drawRoundedRect(x, pageHeight - smallButtonHeight, buttonWidth, smallButtonHeight, 1, smallRadius, true,
                                true, false, false, true);
     }
   }
