@@ -13,9 +13,10 @@ namespace onboarding {
 // them here would change them for everyone.
 enum class Mode : uint8_t { Full, ProfileOnly };
 
-enum class Step : uint8_t { Welcome, Reading, Controls, Sleep, Goals };
+// Theme is device-wide, so ProfileOnly never shows it.
+enum class Step : uint8_t { Welcome, Theme, Reading, Controls, Sleep, Goals };
 
-constexpr size_t MAX_STEPS = 5;
+constexpr size_t MAX_STEPS = 6;
 
 // Writes the pages in order and returns how many.
 inline size_t stepsFor(const Mode mode, Step (&out)[MAX_STEPS]) {
@@ -25,10 +26,11 @@ inline size_t stepsFor(const Mode mode, Step (&out)[MAX_STEPS]) {
     return 2;
   }
   out[0] = Step::Welcome;
-  out[1] = Step::Reading;
-  out[2] = Step::Controls;
-  out[3] = Step::Sleep;
-  out[4] = Step::Goals;
+  out[1] = Step::Theme;
+  out[2] = Step::Reading;
+  out[3] = Step::Controls;
+  out[4] = Step::Sleep;
+  out[5] = Step::Goals;
   return MAX_STEPS;
 }
 
