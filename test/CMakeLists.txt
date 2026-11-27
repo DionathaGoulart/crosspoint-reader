@@ -79,6 +79,7 @@ add_subdirectory(chapter_position)
 add_subdirectory(book_metadata_cache)
 add_subdirectory(home_button)
 add_subdirectory(onboarding_plan)
+add_subdirectory(skin_metrics)
 add_subdirectory(sleep_image_paths)
 add_subdirectory(button_press_navigation)
 
