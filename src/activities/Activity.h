@@ -54,7 +54,7 @@ class Activity {
   // Returns true when the activity schedules its own forced refresh.
   virtual bool handleForcedRefresh() { return false; }
   virtual bool isHomeActivity() const { return false; }
-  // Position of this root screen in the theme's side bar, or -1 when it shows none.
+  // Position of this root screen in the theme's side bar, or None when it shows none.
   virtual SideBarSection sideBarSection() const { return SideBarSection::None; }
   virtual bool handleHomeGesture() { return false; }
   virtual ScreenshotInfo getScreenshotInfo() const { return {}; }

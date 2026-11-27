@@ -28,7 +28,7 @@ class UITheme {
   // Zero-inset on rectangular panels, so no visible change there.
   static Rect getContentArea(const GfxRenderer& renderer);
   // Called by the render task before each screen: reserves the side bar's width on the
-  // renderer for a root screen (section >= 0) when the skin has one, and clears it otherwise.
+  // renderer for a root screen (section != None) when the skin has one, and clears it otherwise.
   static void setActiveSideBar(GfxRenderer& renderer, SideBarSection section);
   // Chrome hook: paints the side bar over the finished frame, just before it is shown.
   static void drawChrome(const GfxRenderer& renderer);
