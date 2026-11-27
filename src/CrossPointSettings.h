@@ -221,6 +221,17 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
     IMAGE_RENDERING_COUNT
   };
 
+  // Persisted by value: append new skins, never reorder.
+  enum UI_THEME {
+    UI_THEME_GOOD = 0,
+    UI_THEME_PIXEL_QUEST = 1,
+    UI_THEME_TERMINAL_DOS = 2,
+    UI_THEME_ARCADE_HUD = 3,
+    UI_THEME_HANDHELD_OS = 4,
+    UI_THEME_MONO_MAC = 5,
+    UI_THEME_COUNT
+  };
+
   // How Select opens the reader menu: the classic full-screen list, or a toolbar
   // overlay (top/bottom bars with Contents / Text / More bottom-sheet panels)
   // painted over the page.
@@ -360,7 +371,9 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
   // Long-press Confirm function in EPUB reader (cycles through LONG_PRESS_MENU_FUNCTION values).
   // Defaults to Disabled so shortcut-based bookmark toggling remains opt-in.
   uint8_t longPressMenuFunction = LP_MENU_DISABLED;
-  // UI Theme
+  // UI theme (UI_THEME). Device-wide, not a profile setting. The JSON key is "uiSkin":
+  // an older firmware used "uiTheme" with different values, which must not be reused.
+  uint8_t uiTheme = UI_THEME_HANDHELD_OS;
   // Sunlight fading compensation
   uint8_t fadingFix = 0;
   // The fading fix compensates the X4/X3 grayscale waveforms; other boards never get it.

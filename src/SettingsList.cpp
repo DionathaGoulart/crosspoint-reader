@@ -44,6 +44,10 @@ void forEachBaseSetting(SettingVisitor visit, void* context) {
   emit(SettingInfo::Enum(StrId::STR_QUICK_RESUME_TIMEOUT, &CrossPointSettings::quickResumeSleepScreen,
                          {StrId::STR_STATE_OFF, StrId::STR_STATE_ON}, "quickResumeSleepScreen",
                          StrId::STR_CAT_DISPLAY));
+  emit(SettingInfo::Enum(StrId::STR_UI_THEME, &CrossPointSettings::uiTheme,
+                         {StrId::STR_THEME_GOOD, StrId::STR_THEME_PIXEL_QUEST, StrId::STR_THEME_TERMINAL_DOS,
+                          StrId::STR_THEME_ARCADE_HUD, StrId::STR_THEME_HANDHELD_OS, StrId::STR_THEME_MONO_MAC},
+                         "uiSkin", StrId::STR_CAT_DISPLAY));
   emit(SettingInfo::Enum(StrId::STR_HIDE_BATTERY, &CrossPointSettings::hideBatteryPercentage,
                          {StrId::STR_NEVER, StrId::STR_IN_READER, StrId::STR_ALWAYS}, "hideBatteryPercentage",
                          StrId::STR_CAT_DISPLAY));
